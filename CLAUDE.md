@@ -94,7 +94,8 @@ Next.js 16 (App Router, Turbopack) + React 19 + Tailwind 4 + TypeScript 7 (one r
 
 ## Our testnet wallets (Circle dev-controlled, EOA, ARC-TESTNET; created 2026-11-12)
 - Treasury: `0x682f94386d613fb53fe4e21c566d13fcc4548c80` (wallet ID in .env)
-- Test contractor: `0xf6da3aba99f59b17b8551bec378a03c590811476`
+- Test contractor: `0xf6da3aba99f59b17b8551bec378a03c590811476` (= vendor "Lumen Design GmbH", EURC)
+- Second contractor: `0x2873aea0b837d5ec9fb3a9aa8dc55c7967f32e00` (= vendor "Northwind Dev Co.", USDC; created via `npm run pay -- new-contractor`)
 - Entity secret registered 2026-11-12; recovery file in `recovery/` (gitignored, back it up privately).
 
 ## Project notes (keep up to date)
@@ -107,4 +108,8 @@ Next.js 16 (App Router, Turbopack) + React 19 + Tailwind 4 + TypeScript 7 (one r
 - `lib/arc.ts` also has `EURC_ADDRESS` and `eurcBalance(owner)`.
 - `app/` — Next.js pages. `app/page.tsx` shows treasury USDC/EURC read live from Arc. Run `npm run dev` (or the "arc-payables" preview in `.claude/launch.json`). `npm run build` passes.
 - `supabase/schema.sql` — tables: profiles (role), vendors (allowlist + payout address), budgets, invoices (our `ref` AP-1001… goes in the memo; `paid_at` set only by the QuickNode webhook), audit_log. Run in Supabase SQL Editor.
-- Done: plain payment ✅, memo payment ✅ (2026-11-12), USDC→EURC swap ✅, Next.js skeleton ✅, schema written (2026-11-13). Next: user creates Supabase project + runs schema → seed demo users/vendors → login with roles → Vercel deploy. Later: make memo payments token-agnostic (USDC or EURC) for the swap-into-treasury flow.
+- `scripts/seed.ts` (`npm run seed`) — demo users alice@example.com (submitter) / bob@example.com (approver), password = `DEMO_PASSWORD` in .env (never print it); vendors; budgets ($10/month design + engineering, sized for the testnet treasury). Idempotent.
+- `scripts/check-db.ts` (`npm run check-db`) — shows server key sees rows, browser key sees 0 (RLS proof, good for the demo).
+- `scripts/check-login.ts` (`npm run check-login`) — signs in both demo users without revealing the password, checks roles and that logged-in users still can't read tables.
+- Auth code: `lib/supabase/server.ts` (login client, publishable key + cookies), `lib/supabase/admin.ts` (`db`, secret key, `server-only`), `lib/auth.ts` (`getCurrentUser`, `requireUser(role?)`), `proxy.ts` (refresh session + redirect to /login), `app/login/` (page + server actions signIn/signOut). Header shows name + role.
+- Done: plain payment ✅, memo payment ✅ (2026-11-12), USDC→EURC swap ✅, Next.js skeleton ✅, Supabase schema + seed ✅, login with roles ✅ (2026-11-13). Next: Vercel deploy (needs GitHub repo), then invoice extraction (Sun). Later: make memo payments token-agnostic (USDC or EURC) for the swap-into-treasury flow.

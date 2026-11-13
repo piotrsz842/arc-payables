@@ -11,7 +11,10 @@
     "pay": "tsx --env-file=.env scripts/test-payment.ts",
     "memo-pay": "tsx --env-file=.env scripts/memo-payment.ts",
     "typecheck": "tsc -p .",
-    "swap": "tsx --env-file=.env scripts/swap-test.ts"
+    "swap": "tsx --env-file=.env scripts/swap-test.ts",
+    "check-db": "tsx --env-file=.env scripts/check-db.ts",
+    "seed": "tsx --env-file=.env scripts/seed.ts",
+    "check-login": "tsx --env-file=.env scripts/check-login.ts"
   },
   "dependencies": {
     "@circle-fin/adapter-circle-wallets": "^1.10.1",
@@ -22,6 +25,7 @@
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
     "viem": "^2.57.19"
   },
   "devDependencies": {

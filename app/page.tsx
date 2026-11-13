@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import { eurcBalance, EXPLORER, usdcBalance } from "@/lib/arc";
+import { requireUser } from "@/lib/auth";
 
 // This is a Server Component: it runs on our server, never in the browser,
 // so it can read server-only settings like the treasury address from .env.
@@ -7,6 +8,7 @@ import { eurcBalance, EXPLORER, usdcBalance } from "@/lib/arc";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  await requireUser(); // must be logged in (any role)
   const treasury = process.env.TREASURY_WALLET_ADDRESS as Address;
 
   // "Trust the chain": read balances directly from Arc, not from Circle.

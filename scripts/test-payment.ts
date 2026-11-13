@@ -89,9 +89,23 @@ async function send(amount: string) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Command 4: one extra contractor wallet (so demo vendors have their own addresses)
+// ---------------------------------------------------------------------------
+async function newContractor() {
+  const setRes = await circle.createWalletSet({ name: "arc-payables-contractors" });
+  const walletSetId = setRes.data?.walletSet?.id;
+  if (!walletSetId) throw new Error("Could not create wallet set");
+  const res = await circle.createWallets({ walletSetId, blockchains: [BLOCKCHAIN], count: 1, accountType: "EOA" });
+  const wallet = res.data?.wallets?.[0];
+  if (!wallet) throw new Error("Could not create wallet");
+  console.log(`New contractor wallet on ${BLOCKCHAIN}: ${wallet.address}`);
+}
+
 // --- Pick the command from the command line ---
 const [command, arg] = process.argv.slice(2);
 if (command === "create-wallets") await createWallets();
+else if (command === "new-contractor") await newContractor();
 else if (command === "balance") await showBalance();
 else if (command === "send") await send(arg ?? "1");
 else console.log("Usage: npm run pay -- create-wallets | balance | send <amount>");
