@@ -28,20 +28,31 @@ if (process.env.CIRCLE_ENTITY_SECRET) {
 
 const entitySecret = randomBytes(32).toString("hex");
 
-mkdirSync("./recovery", { recursive: true });
-await registerEntitySecretCiphertext({
-  apiKey,
-  entitySecret,
-  recoveryFileDownloadPath: "./recovery",
-});
-
-// Fill in the empty CIRCLE_ENTITY_SECRET= line in .env (or add one if missing).
-const envText = readFileSync(".env", "utf8");
+// Save the secret to .env FIRST, so it can't be lost if something crashes
+// after Circle accepts it. Fill in the empty CIRCLE_ENTITY_SECRET= line
+// (or add one if missing).
+const originalEnv = readFileSync(".env", "utf8");
 const line = `CIRCLE_ENTITY_SECRET=${entitySecret}`;
-if (/^CIRCLE_ENTITY_SECRET=.*$/m.test(envText)) {
-  writeFileSync(".env", envText.replace(/^CIRCLE_ENTITY_SECRET=.*$/m, line));
-} else {
-  writeFileSync(".env", envText + `\n${line}\n`);
+const pattern = /^CIRCLE_ENTITY_SECRET=.*$/m;
+writeFileSync(
+  ".env",
+  pattern.test(originalEnv) ? originalEnv.replace(pattern, line) : originalEnv + `\n${line}\n`,
+);
+
+mkdirSync("./recovery", { recursive: true });
+try {
+  await registerEntitySecretCiphertext({
+    apiKey,
+    entitySecret,
+    recoveryFileDownloadPath: "./recovery",
+  });
+} catch (err: any) {
+  // Registration failed, so put .env back the way it was.
+  writeFileSync(".env", originalEnv);
+  // Circle's API errors carry a status code and a JSON body; show just those.
+  console.error("Registration failed:", err?.response?.status ?? "", err?.response?.data ?? err?.message ?? err);
+  process.exit(1);
 }
+
 console.log("Entity secret registered and saved to .env.");
 console.log("A recovery file is in ./recovery. Back it up somewhere private (NOT git).");
