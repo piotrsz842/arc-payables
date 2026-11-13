@@ -45,6 +45,7 @@ Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK
 - EURC testnet: `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a`.
 - **Memo contract** (testnet): `0x5294E9927c3306DcBaDb03fe70b92e01cCede505`. It attaches memo metadata to contract calls and emits `Memo` events. Plain Circle `createTransaction` transfers have NO memo field, so must-ship #4 must go through Circle's contract-execution API calling this contract. Read its ABI before building that.
 - Circle Node SDK: `@circle-fin/developer-controlled-wallets` (needs Node 22.18+). Blockchain ID `ARC-TESTNET`. Circle `refId` is offchain metadata only.
+- Entity secret (https://developers.circle.com/wallets/dev-controlled/entity-secret-management): 32-byte key, account-scoped, Circle never stores it. SDK encrypts it with Circle's public RSA key into a single-use ciphertext per request (anti-replay). Rotate/reset only in Console; reset needs the recovery file (downloadable once). Lose both secret + recovery file = no way to move funds. Docs do NOT say what re-registering does, nor whether keys are MPC; don't claim either.
 - Faucet: https://faucet.circle.com, 20 USDC / address / 2h, CAPTCHA (the human does it).
 
 ## Our testnet wallets (Circle dev-controlled, EOA, ARC-TESTNET; created 2026-11-12)
