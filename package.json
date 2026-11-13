@@ -14,9 +14,12 @@
     "swap": "tsx --env-file=.env scripts/swap-test.ts",
     "check-db": "tsx --env-file=.env scripts/check-db.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
-    "check-login": "tsx --env-file=.env scripts/check-login.ts"
+    "check-login": "tsx --env-file=.env scripts/check-login.ts",
+    "samples": "tsx scripts/make-sample-invoices.ts",
+    "test-extract": "tsx --env-file=.env scripts/test-extract.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@circle-fin/adapter-circle-wallets": "^1.10.1",
     "@circle-fin/app-kit": "^1.22.0",
     "@circle-fin/developer-controlled-wallets": "^10.8.1",
@@ -26,13 +29,15 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "server-only": "^0.0.1",
-    "viem": "^2.57.19"
+    "viem": "^2.57.19",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "pdf-lib": "^1.17.1",
     "postcss": "^8.5.33",
     "tailwindcss": "^4.3.5",
     "tsx": "^4.23.15",
