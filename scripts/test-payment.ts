@@ -14,28 +14,9 @@
  * Docs used:
  *   https://developers.circle.com/wallets/dev-controlled/create-your-first-wallet
  *   https://developers.circle.com/wallets/dev-controlled/transfer-tokens-across-wallets
- *   https://docs.arc.io/arc/references/contract-addresses  (USDC address)
  */
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
-
-// --- Constants (verified against docs on 2026-11-12) ---
-const BLOCKCHAIN = "ARC-TESTNET";
-// USDC on Arc testnet. 6 decimals through this ERC-20 interface.
-const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000";
-const EXPLORER = "https://explorer.testnet.arc.io";
-
-// --- Read settings from .env ---
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing ${name} in .env`);
-  return value;
-}
-
-// The Circle client: every call below goes through it.
-const circle = initiateDeveloperControlledWalletsClient({
-  apiKey: requireEnv("CIRCLE_API_KEY"),
-  entitySecret: requireEnv("CIRCLE_ENTITY_SECRET"),
-});
+import { BLOCKCHAIN, EXPLORER, USDC_ADDRESS } from "../lib/arc.js";
+import { circle, requireEnv, waitForTransaction } from "../lib/circle.js";
 
 // ---------------------------------------------------------------------------
 // Command 1: create a wallet set and two wallets on Arc testnet
@@ -46,7 +27,8 @@ async function createWallets() {
   const walletSetId = setRes.data?.walletSet?.id;
   if (!walletSetId) throw new Error("Could not create wallet set");
 
-  // EOA = a normal Ethereum-style account (simplest; works everywhere).
+  // EOA = a normal Ethereum-style account (simplest; works everywhere,
+  // and Arc's Memo contract only accepts EOAs).
   const walletsRes = await circle.createWallets({
     walletSetId,
     blockchains: [BLOCKCHAIN],
@@ -84,13 +66,13 @@ async function showBalance() {
 }
 
 // ---------------------------------------------------------------------------
-// Command 3: send USDC treasury → contractor, then wait for it to finish
+// Command 3: send USDC treasury → contractor (plain transfer, no memo)
 // ---------------------------------------------------------------------------
 async function send(amount: string) {
   const res = await circle.createTransaction({
     blockchain: BLOCKCHAIN,
     walletAddress: requireEnv("TREASURY_WALLET_ADDRESS"),
-    tokenAddress: ARC_TESTNET_USDC,
+    tokenAddress: USDC_ADDRESS,
     destinationAddress: requireEnv("CONTRACTOR_WALLET_ADDRESS"),
     amount: [amount], // a string like "1" means 1 USDC (Circle handles decimals)
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
@@ -99,22 +81,11 @@ async function send(amount: string) {
   if (!txId) throw new Error("Circle did not return a transaction id");
   console.log(`Submitted Circle transaction ${txId}. Waiting...`);
 
-  // Circle processes the transaction in the background, so we ask every
-  // 3 seconds until it reaches a final state.
-  const FINAL_STATES = ["COMPLETE", "FAILED", "CANCELLED", "DENIED"];
-  while (true) {
-    await new Promise((r) => setTimeout(r, 3000));
-    const poll = await circle.getTransaction({ id: txId });
-    const tx = poll.data?.transaction;
-    console.log(`  state: ${tx?.state}`);
-    if (tx?.state && FINAL_STATES.includes(tx.state)) {
-      if (tx.state === "COMPLETE") {
-        console.log(`\nPayment done! ${EXPLORER}/tx/${tx.txHash}`);
-      } else {
-        console.log(`\nPayment did not complete: ${tx.state}`, tx.errorReason ?? "");
-      }
-      return;
-    }
+  const result = await waitForTransaction(txId);
+  if (result.state === "COMPLETE") {
+    console.log(`\nPayment done! ${EXPLORER}/tx/${result.txHash}`);
+  } else {
+    console.log(`\nPayment did not complete: ${result.state}`, result.errorReason ?? "");
   }
 }
 

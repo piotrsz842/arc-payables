@@ -71,6 +71,10 @@ Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK
 - App Kit Swap: USDC/EURC/cirBTC on Arc testnet (https://docs.arc.io/app-kit/swap).
 - CCTP V2 on Arc testnet: domain 26, TokenMessengerV2 `0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA`, MessageTransmitterV2 `0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275`.
 - **Each USDC transfer emits TWO `Transfer` logs** (seen in test tx `0x9768a25d…3a376d34`, block 72137690): one from `0x3600…0000` (6 decimals) and one from system address `0xffff…fffe` (18 decimals, native). The QuickNode filter must match only the `0x3600…` log, or payments get double-counted.
+- **Memo contract ABI** (verified source on explorer; tutorial https://docs.arc.io/arc/tutorials/send-usdc-with-transaction-memo): `memo(address target, bytes data, bytes32 memoId, bytes memoData)`. Emits `BeforeMemo(uint256 indexed memoIndex)` THEN `Memo(address indexed sender, address indexed target, bytes32 callDataHash, bytes32 indexed memoId, bytes memo, uint256 memoIndex)`. Memo topic0 `0xeb15ee720798341c37739df41be53acfbbf70ae6802dade35457beec6e47a5e4`. Uses CallFrom precompile so the USDC transfer's sender is our wallet (no approve). EOA callers only. Memos are public: invoice IDs only, no personal data.
+- Our memo format: `memoId = keccak256(invoiceId)` (indexed → QuickNode can filter by it), `memoData = invoiceId` as UTF-8 bytes.
+- Circle: send memo payments with `createContractExecutionTransaction({ walletId, contractAddress: MEMO, callData })` (callData built with viem, since abiParameters officially only supports string/number/boolean).
+- Memo payments verified on chain: INV-0001 (1 USDC) `0xc8e4e12c…5f08a2`, INV-0002 (0.5 USDC) `0xc6be2c34…aae04c`.
 - First test payment (1 USDC) cost ~0.0024 USDC gas (73,950 gas).
 - Faucet: https://faucet.circle.com, 20 USDC / address / 2h, CAPTCHA (the human does it).
 
@@ -81,4 +85,8 @@ Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK
 
 ## Project notes (keep up to date)
 - `scripts/` holds standalone scripts run with `npx tsx scripts/<name>.ts`.
-- `scripts/test-payment.ts` — proves the payment rail: creates a Circle dev-controlled wallet on ARC-TESTNET and sends a small USDC transfer.
+- `scripts/test-payment.ts` — proves the payment rail: creates Circle dev-controlled wallets on ARC-TESTNET, shows balance, sends a plain USDC transfer.
+- `scripts/memo-payment.ts` — `pay <invoiceId> <amount>` sends USDC via the Memo contract and verifies it on chain; `verify <txHash> <invoiceId>` re-checks without paying.
+- `lib/arc.ts` — Arc addresses, Memo ABI, `buildMemoTransferCall`, `readMemoPayment` (reads receipt, returns memo text + USDC transfer). Reuse in the app and the QuickNode webhook.
+- `lib/circle.ts` — Circle client, `requireEnv`, `waitForTransaction`.
+- Done 2026-11-12: plain payment ✅, memo payment ✅. Next: USDC→EURC App Kit Swap test script.
