@@ -47,6 +47,11 @@ Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK
 - Circle Node SDK: `@circle-fin/developer-controlled-wallets` (needs Node 22.18+). Blockchain ID `ARC-TESTNET`. Circle `refId` is offchain metadata only.
 - Faucet: https://faucet.circle.com, 20 USDC / address / 2h, CAPTCHA (the human does it).
 
+## Our testnet wallets (Circle dev-controlled, EOA, ARC-TESTNET; created 2026-11-12)
+- Treasury: `0x682f94386d613fb53fe4e21c566d13fcc4548c80` (wallet ID in .env)
+- Test contractor: `0xf6da3aba99f59b17b8551bec378a03c590811476`
+- Entity secret registered 2026-11-12; recovery file in `recovery/` (gitignored, back it up privately).
+
 ## Project notes (keep up to date)
 - `scripts/` holds standalone scripts run with `npx tsx scripts/<name>.ts`.
 - `scripts/test-payment.ts` — proves the payment rail: creates a Circle dev-controlled wallet on ARC-TESTNET and sends a small USDC transfer.
