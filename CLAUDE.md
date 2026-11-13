@@ -47,7 +47,15 @@ Dropped: CSV export.
 - Fri Nov 20 morning: submit (deadline 12:00 PM CST)
 
 ### Stack
-Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK, viem, an LLM API for invoice extraction, deployed on Vercel.
+Next.js 16 (App Router, Turbopack) + React 19 + Tailwind 4 + TypeScript 7 (one repo), **Supabase** (Postgres + Auth + Storage; chosen 2026-11-13 by the user to avoid hand-rolled login), Circle Wallets SDK + App Kit, viem, an LLM API for invoice extraction, deployed on Vercel.
+
+### App security model (explain this to judges)
+- The browser never queries the database. Every table has RLS ON with NO policies, so the publishable key can't read anything.
+- Supabase Auth = WHO you are. Our server code = WHAT you may do (checks `profiles.role`), then queries with the server-only `SUPABASE_SECRET_KEY` (bypasses RLS).
+- On the server, verify the user with `supabase.auth.getClaims()` (checks the JWT signature). NEVER trust `getSession()` server-side (reads the cookie unverified).
+- Next.js 16: the session-refresh file is `proxy.ts` (was `middleware.ts`); a misnamed file silently breaks sessions.
+- Only `NEXT_PUBLIC_*` env vars reach the browser: just the Supabase URL + publishable key. Circle keys, entity secret, Supabase secret key stay server-only.
+- Known: `npm audit` flags `elliptic` (via ethers v5 inside Circle packages). The fix would downgrade App Kit; we don't sign with it (Circle signs server-side). Mention under known limitations.
 
 ### README must include
 - Architecture overview
@@ -97,4 +105,6 @@ Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK
 - `lib/circle.ts` — Circle client, `requireEnv`, `waitForTransaction`.
 - `scripts/swap-test.ts` — `estimate <usdc>` quotes USDC→EURC; `swap <usdc>` swaps with EURC sent to the contractor and checks the contractor's EURC balance on chain before/after.
 - `lib/arc.ts` also has `EURC_ADDRESS` and `eurcBalance(owner)`.
-- Done: plain payment ✅, memo payment ✅ (2026-11-12), USDC→EURC swap ✅ (2026-11-13). Next (Sat): Next.js + DB + Vercel deploy + login/roles skeleton. Later: make memo payments token-agnostic (USDC or EURC) for the swap-into-treasury flow.
+- `app/` — Next.js pages. `app/page.tsx` shows treasury USDC/EURC read live from Arc. Run `npm run dev` (or the "arc-payables" preview in `.claude/launch.json`). `npm run build` passes.
+- `supabase/schema.sql` — tables: profiles (role), vendors (allowlist + payout address), budgets, invoices (our `ref` AP-1001… goes in the memo; `paid_at` set only by the QuickNode webhook), audit_log. Run in Supabase SQL Editor.
+- Done: plain payment ✅, memo payment ✅ (2026-11-12), USDC→EURC swap ✅, Next.js skeleton ✅, schema written (2026-11-13). Next: user creates Supabase project + runs schema → seed demo users/vendors → login with roles → Vercel deploy. Later: make memo payments token-agnostic (USDC or EURC) for the swap-into-treasury flow.

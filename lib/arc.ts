@@ -34,16 +34,19 @@ export const USDC_DECIMALS = 6;
 export const EURC_ADDRESS: Address = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
 export const EURC_DECIMALS = 6;
 
-/** Read any wallet's EURC balance straight from Arc, e.g. "0.85". */
-export async function eurcBalance(owner: Address): Promise<string> {
+/** Read a wallet's balance of a 6-decimal token (USDC or EURC) straight from Arc, e.g. "0.85". */
+export async function tokenBalance(token: Address, owner: Address): Promise<string> {
   const raw = await arcClient.readContract({
-    address: EURC_ADDRESS,
+    address: token,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [owner],
   });
-  return formatUnits(raw, EURC_DECIMALS);
+  return formatUnits(raw, 6); // both USDC and EURC use 6 decimals on Arc
 }
+
+export const eurcBalance = (owner: Address) => tokenBalance(EURC_ADDRESS, owner);
+export const usdcBalance = (owner: Address) => tokenBalance(USDC_ADDRESS, owner);
 
 // Arc's built-in Memo contract. EOA wallets only.
 export const MEMO_ADDRESS: Address = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505";
