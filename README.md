@@ -2,6 +2,8 @@
 
 An AI accounts-payable agent that pays international contractors in **USDC and EURC on Arc testnet** (Circle's stablecoin L1), built for the UBC 2026 Hackathon.
 
+**Live demo:** https://arc-payables-chi.vercel.app
+
 > 🚧 Work in progress. The full README (architecture, the agent's decision loop and safety limits, Arc contract addresses, QuickNode Stream configuration) is coming before submission.
 
 ## What works so far
