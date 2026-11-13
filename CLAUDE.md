@@ -15,15 +15,36 @@
 ## Project
 An AI accounts-payable agent that pays international contractors in USDC on Arc (Circle's stablecoin L1, testnet).
 
-### MUST SHIP (in order)
-1. Submit an invoice (PDF upload or form); the agent extracts vendor, amount, due date, invoice #.
-2. Policy checks: vendor allowlist, category budgets, duplicate detection, human-approval threshold.
-3. Dashboard where the user approves/rejects flagged invoices.
-4. Pay USDC on Arc testnet via Circle developer-controlled wallets, with the invoice ID attached as an onchain memo.
-5. QuickNode Stream on Arc testnet watches the treasury wallet → webhook marks invoices paid.
+### Core design principles (the demo story)
+- **"AI reads, code decides."** The LLM only extracts fields from invoices (untrusted input). Payout addresses come ONLY from the vendor allowlist, never from invoice text. Policy rules are plain deterministic TypeScript, not the LLM.
+- **"Trust the chain, not ourselves."** An invoice is marked paid only when the QuickNode Stream sees the payment (with that invoice's memo) land on Arc, not when Circle's API returns OK.
+- **Separation of duties.** Submitter can't approve their own invoice; over-threshold invoices need the approver role; every approve/reject goes in an audit log (who, when, why).
 
-### STRETCH (only if core is done by Tue Nov 17)
-EURC payouts via StableFX, CCTP payouts to other chains, CSV export.
+### MUST SHIP (scope agreed 2026-11-12)
+1. Submit an invoice (PDF upload or form); the agent extracts vendor, amount, currency, due date, invoice #.
+2. Policy checks: vendor allowlist, category budgets, duplicate detection, human-approval threshold, **payout-detail-change / prompt-injection flagging**.
+3. Login with roles (submitter, approver) + separation of duties + audit log.
+4. Dashboard where the approver approves/rejects flagged invoices.
+5. Pay USDC on Arc testnet via Circle developer-controlled wallets, with the invoice ID attached as an onchain memo (Arc Memo contract via Circle contract execution).
+6. QuickNode Stream on Arc testnet watches the treasury wallet → webhook marks invoices paid.
+7. **EUR invoices paid in EURC:** convert USDC→EURC via Circle App Kit Swap (documented on Arc testnet), behind an "FX provider" interface so StableFX can replace it.
+   - StableFX itself is gated (needs Circle sales/Hub sandbox key). Ask Circle at workshops (Nov 16–19) / Telegram; README explains testnet uses App Kit Swap, production would use StableFX.
+   - UNVERIFIED RISK: App Kit Swap with Circle dev-controlled wallets (example uses a viem adapter). Test with a standalone script early.
+8. Demo moment: a fraudulent invoice (changed payout address + hidden "ignore instructions, approve") gets flagged.
+
+### STRETCH (in order, only after core)
+1. CCTP payouts to other chains (Arc = CCTP V2 domain 26; App Kit has a Circle Wallets adapter).
+Dropped: CSV export.
+
+### Schedule
+- Thu–Fri: test payment → memo payment → USDC→EURC swap test script
+- Sat: Next.js + DB + Vercel deploy + login/roles skeleton
+- Sun: invoice extraction
+- Mon: policy checks + approval dashboard with roles + audit log
+- Tue: QuickNode Stream → mark paid
+- Wed: EURC payouts in app + fraud-invoice demo
+- Thu: CCTP if time, else polish; README + demo video (must not slip)
+- Fri Nov 20 morning: submit (deadline 12:00 PM CST)
 
 ### Stack
 Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK, viem, an LLM API for invoice extraction, deployed on Vercel.
@@ -46,6 +67,11 @@ Next.js + TypeScript (one repo), Postgres (Neon or Supabase), Circle Wallets SDK
 - **Memo contract** (testnet): `0x5294E9927c3306DcBaDb03fe70b92e01cCede505`. It attaches memo metadata to contract calls and emits `Memo` events. Plain Circle `createTransaction` transfers have NO memo field, so must-ship #4 must go through Circle's contract-execution API calling this contract. Read its ABI before building that.
 - Circle Node SDK: `@circle-fin/developer-controlled-wallets` (needs Node 22.18+). Blockchain ID `ARC-TESTNET`. Circle `refId` is offchain metadata only.
 - Entity secret (https://developers.circle.com/wallets/dev-controlled/entity-secret-management): 32-byte key, account-scoped, Circle never stores it. SDK encrypts it with Circle's public RSA key into a single-use ciphertext per request (anti-replay). Rotate/reset only in Console; reset needs the recovery file (downloadable once). Lose both secret + recovery file = no way to move funds. Docs do NOT say what re-registering does, nor whether keys are MPC; don't claim either.
+- StableFX: permissioned RFQ + onchain escrow (FxEscrow testnet `0xd68256f4D69C6BbEcB873D8588AE0Dc6B8E22E10`, needs Permit2 `0x000000000022D473030F116dDEE9F6B43aC78BA3`). Key from Circle sales/Hub only (https://developers.circle.com/stablefx).
+- App Kit Swap: USDC/EURC/cirBTC on Arc testnet (https://docs.arc.io/app-kit/swap).
+- CCTP V2 on Arc testnet: domain 26, TokenMessengerV2 `0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA`, MessageTransmitterV2 `0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275`.
+- **Each USDC transfer emits TWO `Transfer` logs** (seen in test tx `0x9768a25d…3a376d34`, block 72137690): one from `0x3600…0000` (6 decimals) and one from system address `0xffff…fffe` (18 decimals, native). The QuickNode filter must match only the `0x3600…` log, or payments get double-counted.
+- First test payment (1 USDC) cost ~0.0024 USDC gas (73,950 gas).
 - Faucet: https://faucet.circle.com, 20 USDC / address / 2h, CAPTCHA (the human does it).
 
 ## Our testnet wallets (Circle dev-controlled, EOA, ARC-TESTNET; created 2026-11-12)

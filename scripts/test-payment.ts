@@ -75,8 +75,11 @@ async function showBalance() {
     console.log("Treasury is empty. Fund it at https://faucet.circle.com");
     return;
   }
+  // On Arc, USDC shows up twice: once as the native gas token and once as the
+  // ERC-20 at 0x3600...0000. Both views read the SAME money, so don't add them up.
   for (const b of balances) {
-    console.log(`${b.token?.symbol ?? "?"}: ${b.amount}`);
+    const kind = b.token?.isNative ? "native gas balance" : `ERC-20 ${b.token?.tokenAddress}`;
+    console.log(`${b.token?.symbol ?? "?"}: ${b.amount}  (${kind})`);
   }
 }
 
