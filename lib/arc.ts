@@ -30,6 +30,21 @@ export const EXPLORER = "https://explorer.testnet.arc.io";
 export const USDC_ADDRESS: Address = "0x3600000000000000000000000000000000000000";
 export const USDC_DECIMALS = 6;
 
+// EURC (euro stablecoin) on Arc testnet. Also 6 decimals.
+export const EURC_ADDRESS: Address = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+export const EURC_DECIMALS = 6;
+
+/** Read any wallet's EURC balance straight from Arc, e.g. "0.85". */
+export async function eurcBalance(owner: Address): Promise<string> {
+  const raw = await arcClient.readContract({
+    address: EURC_ADDRESS,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [owner],
+  });
+  return formatUnits(raw, EURC_DECIMALS);
+}
+
 // Arc's built-in Memo contract. EOA wallets only.
 export const MEMO_ADDRESS: Address = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505";
 // The Memo contract emits TWO events per call: BeforeMemo (just a counter)

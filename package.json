@@ -7,9 +7,12 @@
     "register-secret": "tsx --env-file=.env scripts/register-entity-secret.ts",
     "pay": "tsx --env-file=.env scripts/test-payment.ts",
     "memo-pay": "tsx --env-file=.env scripts/memo-payment.ts",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "swap": "tsx --env-file=.env scripts/swap-test.ts"
   },
   "dependencies": {
+    "@circle-fin/adapter-circle-wallets": "^1.10.1",
+    "@circle-fin/app-kit": "^1.22.0",
     "@circle-fin/developer-controlled-wallets": "^10.8.1",
     "viem": "^2.57.19"
   },
