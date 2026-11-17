@@ -129,7 +129,7 @@ Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript 7, Supabase (Postgr
 - Machine check 2026-11-16 (new laptop): `npm run pay -- send 0.01` COMPLETE, tx `0xe22cf580…50a8`.
 
 ## Deploy
-- GitHub https://github.com/piotrsz842/notes-by-students (renamed from `arc-payables` 2026-11-16; GitHub redirects the old URL). Public; push to `main` auto-deploys to Vercel. Old Vercel URL https://arc-payables-chi.vercel.app; Vercel project rename is done by the user in the dashboard. UNVERIFIED until the next push: that Vercel's Git link follows the GitHub rename, and what the production URL becomes. `vercel.json` pins `"framework": "nextjs"`.
+- GitHub https://github.com/piotrsz842/notes-by-students (renamed from `arc-payables` 2026-11-16; GitHub redirects the old URL). Public; push to `main` auto-deploys to Vercel. Live: https://arc-payables-chi.vercel.app (Vercel project still named `arc-payables`; the user renames it in the dashboard, and the URL may or may not change). Verified 2026-11-16: Vercel's Git link followed the GitHub rename (push of fe9c442 deployed in ~21 s), and the agent bought a snippet from the live `/api/snippets/demo-1` (672 ms). `vercel.json` pins `"framework": "nextjs"`.
 - Local folder is still `projecto/arc-payables`; rename it with no session/editor open in it.
 - Vercel env vars: least privilege; add server keys only when a feature needs them.
 
