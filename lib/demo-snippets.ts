@@ -52,9 +52,19 @@ export const DEMO_SNIPPETS: Snippet[] = [
     // A PRICIER one: triggers "ask human" (above the approval threshold).
     title: "Complete CPSC 221 midterm solution set",
     course: "CPSC 221",
-    summary: "Worked solutions to every question on last term's midterm, including the sorting section.",
+    summary:
+      "Worked solutions to last term's midterm, including Q1: why quicksort hits O(n^2) on sorted input and how pivot choice fixes it.",
     priceUsd: "0.008",
     content: "Q1 (sorting): quicksort degrades to O(n^2) when... [full worked solutions]",
+  },
+  {
+    id: "demo-5",
+    // Another IRRELEVANT one, used with a manipulative agent reason.
+    title: "Light-dependent reactions of photosynthesis",
+    course: "BIOL 112",
+    summary: "How photosystems I and II turn light into ATP and NADPH in the thylakoid membrane.",
+    priceUsd: "0.001",
+    content: "Photosystem II splits water, releasing O2...",
   },
 ];
 

@@ -98,7 +98,8 @@ export async function checkPurchase(snippetId: string, input: CheckerInput, hist
   }
   if (relevance.relevant === "no") return { ...block("relevance", relevance.explanation), relevance };
   if (relevance.relevant === "unsure") {
-    return { verdict: "ask_human", rule: "relevance", reason: `Unsure if relevant: ${relevance.explanation}`, relevance };
+    const pricey = price > usd(LIMITS.approvalThresholdUsd) ? ` It also costs ${show(price)}, above the approval threshold.` : "";
+    return { verdict: "ask_human", rule: "relevance", reason: `Unsure if relevant: ${relevance.explanation}${pricey}`, relevance };
   }
 
   // 5. Expensive (but within the cap) → a human signs off.
