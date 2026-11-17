@@ -30,23 +30,16 @@ export const EXPLORER = "https://explorer.testnet.arc.io";
 export const USDC_ADDRESS: Address = "0x3600000000000000000000000000000000000000";
 export const USDC_DECIMALS = 6;
 
-// EURC (euro stablecoin) on Arc testnet. Also 6 decimals.
-export const EURC_ADDRESS: Address = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
-export const EURC_DECIMALS = 6;
-
-/** Read a wallet's balance of a 6-decimal token (USDC or EURC) straight from Arc, e.g. "0.85". */
-export async function tokenBalance(token: Address, owner: Address): Promise<string> {
+/** Read a wallet's USDC balance straight from Arc, e.g. "0.85". */
+export async function usdcBalance(owner: Address): Promise<string> {
   const raw = await arcClient.readContract({
-    address: token,
+    address: USDC_ADDRESS,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [owner],
   });
-  return formatUnits(raw, 6); // both USDC and EURC use 6 decimals on Arc
+  return formatUnits(raw, USDC_DECIMALS);
 }
-
-export const eurcBalance = (owner: Address) => tokenBalance(EURC_ADDRESS, owner);
-export const usdcBalance = (owner: Address) => tokenBalance(USDC_ADDRESS, owner);
 
 // --- Circle Gateway (Nanopayments) on Arc testnet ---
 // Source: https://developers.circle.com/gateway/references/contract-addresses
