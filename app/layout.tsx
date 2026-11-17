@@ -4,8 +4,8 @@ import { signOut } from "./login/actions";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Arc Payables",
-  description: "AI accounts-payable agent paying contractors in USDC/EURC on Arc",
+  title: "Notes by Students",
+  description: "Students get paid when an AI tutor uses their notes",
 };
 
 // The frame around every page: header (with who's logged in) + page content.
@@ -16,7 +16,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <header className="border-b bg-white">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <span className="font-semibold">Arc Payables</span>
+            <span className="font-semibold">Notes by Students</span>
             {user && (
               <form action={signOut} className="flex items-center gap-3 text-sm">
                 <span>

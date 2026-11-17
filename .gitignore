@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# same file without the dot (happened once on a new machine)
+env
 # Circle entity-secret recovery file (treat like a password)
 recovery/
 recovery_file*.dat
