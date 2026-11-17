@@ -20,10 +20,9 @@
  */
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { GatewayClient } from "@circle-fin/x402-batching/client";
 import { createClient } from "@supabase/supabase-js";
-import type { Hex } from "viem";
-import type { SnippetPreview } from "../lib/demo-snippets.js";
+import { getAgent } from "../lib/agent-wallet.js";
+import { getPreview } from "../lib/snippets.js";
 import { finishRun, proposePurchase, startRun, type AskHuman } from "../lib/purchases.js";
 
 function requireEnv(name: string): string {
@@ -56,24 +55,22 @@ const askHuman: AskHuman = async (preview, decision) => {
   console.log(`   ? Needs your approval: "${preview.title}" for $${preview.priceUsd}. ${decision.reason}`);
   if (humanMode !== "ask") {
     console.log(`   ? (--human=${humanMode}) ${humanMode === "yes" ? "approved" : "denied"}`);
-    return humanMode === "yes";
+    return humanMode === "yes" ? "approved" : "denied";
   }
   const rl = createInterface({ input: stdin, output: stdout });
   const answer = await rl.question("   ? Approve this purchase? (y/n) ");
   rl.close();
-  return answer.trim().toLowerCase().startsWith("y");
+  return answer.trim().toLowerCase().startsWith("y") ? "approved" : "denied";
 };
 
 // --- Setup ---
 const db = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("SUPABASE_SECRET_KEY"), {
   auth: { persistSession: false },
 });
-const agent = new GatewayClient({ chain: "arcTestnet", privateKey: requireEnv("AGENT_PRIVATE_KEY") as Hex });
+const agent = getAgent();
 
-// The agent only ever sees FREE previews before deciding what to buy.
-const previews: SnippetPreview[] = await (await fetch(`${BASE_URL}/api/snippets`)).json();
 
-const run = await startRun(db, QUESTION, BUDGET_USD);
+const run = await startRun(db, { question: QUESTION, budgetUsd: BUDGET_USD });
 console.log(`Question: ${QUESTION}`);
 console.log(`Budget for this question: $${BUDGET_USD}   (run ${run.id})\n`);
 
@@ -82,8 +79,9 @@ let loopBlocks = 0;
 let status: "finished" | "stopped_looping" = "finished";
 
 for (const [i, proposal] of PROPOSALS.entries()) {
-  const preview = previews.find((p) => p.id === proposal.id);
-  if (!preview) throw new Error(`No preview for ${proposal.id}`);
+  // The agent only ever sees the FREE preview before deciding.
+  const preview = await getPreview(db, proposal.id);
+  if (!preview) throw new Error(`No snippet ${proposal.id}: run npm run seed`);
 
   console.log(`${i + 1}. Agent proposes "${preview.title}" (${preview.course}, $${preview.priceUsd})`);
   console.log(`   reason: ${proposal.reason}`);
@@ -103,7 +101,7 @@ for (const [i, proposal] of PROPOSALS.entries()) {
     break;
   }
 }
-await finishRun(db, run.id, status);
+await finishRun(db, run.id, { status });
 
 // --- The decision log, read back from the database ---
 const { data: runRow } = await db.from("agent_runs").select("spent_usd, status").eq("id", run.id).single();

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signIn } from "./actions";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -15,7 +16,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <input name="password" type="password" required className="mt-1 w-full rounded border px-3 py-2" />
       </label>
       <button className="w-full rounded bg-slate-900 py-2 font-medium text-white">Sign in</button>
-      <p className="text-xs text-slate-500">Demo: alice@example.com (submitter) · bob@example.com (approver)</p>
+      <p className="text-sm text-slate-500">
+        New here? <Link href="/signup" className="underline">Create an account</Link>
+      </p>
     </form>
   );
 }

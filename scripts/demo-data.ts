@@ -1,22 +1,18 @@
 /**
- * Hard-coded demo snippets for Stages 1–2. Stage 3 replaces this file with
- * real notes uploaded by authors (stored in the database).
- *
- * Each snippet has a FREE preview (title, course, one-line summary) that
- * anyone can read, and PAID content that costs a fraction of a cent.
+ * Seed data for the Stage 2 checker demo (scripts/stage2-demo.ts).
+ * The seed script stores these as snippets with these exact ids, written by a
+ * "demo author" account. Real demo authors with real notes come in Stage 6.
  */
-export type Snippet = {
+export type DemoSnippet = {
   id: string;
   title: string;
   course: string;
-  summary: string; // one line, part of the free preview
+  summary: string;
   priceUsd: string;
-  content: string; // only returned after payment
+  content: string;
 };
 
-export type SnippetPreview = Omit<Snippet, "content">;
-
-export const DEMO_SNIPPETS: Snippet[] = [
+export const DEMO_SNIPPETS: DemoSnippet[] = [
   {
     id: "demo-1",
     title: "Big-O of common sorting algorithms",
@@ -67,12 +63,3 @@ export const DEMO_SNIPPETS: Snippet[] = [
     content: "Photosystem II splits water, releasing O2...",
   },
 ];
-
-export function findSnippet(id: string): Snippet | undefined {
-  return DEMO_SNIPPETS.find((s) => s.id === id);
-}
-
-/** The free part only: never includes `content`. */
-export function toPreview({ content: _content, ...preview }: Snippet): SnippetPreview {
-  return preview;
-}

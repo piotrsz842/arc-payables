@@ -19,10 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <span className="font-semibold">Notes by Students</span>
             {user && (
               <form action={signOut} className="flex items-center gap-3 text-sm">
-                <span>
-                  {user.fullName}{" "}
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs uppercase tracking-wide">{user.role}</span>
-                </span>
+                <span>{user.displayName}</span>
                 <button className="text-slate-500 underline">Sign out</button>
               </form>
             )}
