@@ -49,12 +49,38 @@ Email signup, dollar amounts, plain words ("earnings", "cash out"). No addresses
 4. **Stage 4:** cash-out on Arc with a Memo, then CCTP cash-out to one other testnet chain.
 5. **Stage 5:** UI: upload page, tutor chat showing purchases/blocks live, author dashboard, "ask human" approval prompt.
 6. **Stage 6:** deploy to Vercel, seed 3–4 demo authors with notes the user writes, end-to-end test.
-- **Stretch** (only if all above done by Wed afternoon, in order): ERC-8004 agent identity on Arc; small royalty/escrow contract on Arc; QuickNode Stream watching the platform wallet.
 - **If later stages run short, Stages 1–2 alone must still be a complete, demoable project.**
 
+### Remaining plan (from the user, 2026-11-17; replaces the old stretch list)
+**Stage 6 (Tue Nov 17), after the live-site test:**
+- Seed data: the user writes the notes for a course they're taking. 3–4 demo author accounts. Include one deliberately irrelevant note so the checker has something to block.
+- **Outside agent:** a separate script with NO account on our platform that finds a snippet (free `GET /api/snippets`) and buys it over x402 (`/api/snippets/[id]`) like any outside AI agent would. Demo point: why x402 matters (any agent can buy our notes, not just our tutor). The sale still credits the author.
+- Run the full flow end to end on the live site after seeding.
+
+**Wednesday extras, in priority order. Stop after two, and ASK the user before starting each:**
+1. Spendable earnings + free starter questions → **already built in Stage 3** (nothing to do).
+2. pgvector search on snippets, filtered by course first.
+3. ERC-8004 agent identity on Arc for the tutor agent.
+4. QuickNode Stream on Arc testnet watching the platform wallet (only if the user decides to enter that bounty).
+- **FEATURE FREEZE Wednesday night (Nov 18). After that: bug fixes only.**
+
+**Thursday: submission materials**
+- README (see below).
+- Help plan a 2–3 min demo video script showing: a purchase, a blocked purchase, the outside agent, and a cash-out.
+- Help rehearse the 5-min pitch and likely judge questions. **The user writes the Devpost answers and pitch in their own words; we only review them.**
+
+**Ongoing:** walk the user through the codebase piece by piece so they can explain every part to judges. Start with the payment flow and the checker.
+
 ### README must include
-Architecture overview; the agent's decision loop and safety limits (checker, budget, loop detection, human approval); how we use Arc and which Circle protocols (Gateway Nanopayments, x402, Wallets, CCTP, Memo) and why each; every contract address used; setup instructions; what is simulated (testnet funds, seeded notes).
-- **"What's next" section** must mention: the platform would take a small cut per purchase to cover the cost of running the AI model.
+- Architecture diagram/overview.
+- The agent's decision loop and safety limits (checker, budget, loop detection, human approval).
+- Every Circle protocol used (Gateway Nanopayments, x402, Wallets, CCTP via App Kit, Memo, any others) and why each.
+- Every contract address used.
+- Setup instructions.
+- What is simulated (testnet funds, seeded notes).
+- A **"Why x402"** section.
+- A **scaling** section: storage, pgvector search filtered by course, batched settlement, checker cost, moderation.
+- **What's next:** platform fee per purchase to cover AI model costs, direct per-purchase author payouts, reputation.
 
 ## Rules for us
 - **Never commit `.env` or secrets.** The user enters keys themselves. Only `.env.example` with blank placeholders.
