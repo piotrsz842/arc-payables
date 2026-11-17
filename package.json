@@ -19,7 +19,8 @@
     "test-checker": "tsx --env-file=.env scripts/test-checker.ts",
     "decision-log": "tsx --env-file=.env scripts/decision-log.ts",
     "ask": "tsx --env-file=.env scripts/ask-tutor.ts",
-    "test-notes": "tsx --env-file=.env scripts/test-notes.ts"
+    "test-notes": "tsx --env-file=.env scripts/test-notes.ts",
+    "ledger": "tsx --env-file=.env scripts/ledger-summary.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

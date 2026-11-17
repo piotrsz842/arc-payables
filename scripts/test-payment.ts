@@ -68,7 +68,8 @@ async function showBalance() {
 // ---------------------------------------------------------------------------
 // Command 3: send USDC treasury → contractor (plain transfer, no memo)
 // ---------------------------------------------------------------------------
-async function send(amount: string, to = requireEnv("CONTRACTOR_WALLET_ADDRESS")) {
+async function send(amount: string, to?: string) {
+  to ??= requireEnv("CONTRACTOR_WALLET_ADDRESS");
   const res = await circle.createTransaction({
     blockchain: BLOCKCHAIN,
     walletAddress: requireEnv("TREASURY_WALLET_ADDRESS"),
@@ -103,11 +104,12 @@ async function newContractor() {
 }
 
 // --- Pick the command from the command line ---
-const [command, arg] = process.argv.slice(2);
+const [command, arg, arg2] = process.argv.slice(2);
 if (command === "create-wallets") await createWallets();
 else if (command === "new-contractor") await newContractor();
 else if (command === "balance") await showBalance();
-else if (command === "send") await send(arg ?? "1");
+// send <amount> [address]: platform wallet → address (e.g. to give a test user test funds)
+else if (command === "send") await send(arg ?? "1", arg2);
 // Give the tutor agent its budget: platform wallet → agent wallet (plain USDC transfer).
 else if (command === "fund-agent") await send(arg ?? "2", requireEnv("AGENT_ADDRESS"));
 else console.log("Usage: npm run pay -- create-wallets | balance | send <amount> | fund-agent <amount>");

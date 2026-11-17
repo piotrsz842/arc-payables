@@ -59,7 +59,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
           {(notes ?? []).map((n) => (
             <li key={n.id} className="flex justify-between p-3 text-sm">
               <span><span className="font-medium">{n.course}</span> · {n.title}</span>
-              <span>{soldByNote.get(n.id) ?? 0} uses · earned {money(earnedByNote.get(n.id) ?? 0n)}</span>
+              <span>
+                {soldByNote.get(n.id) ?? 0} {soldByNote.get(n.id) === 1 ? "use" : "uses"} · earned {money(earnedByNote.get(n.id) ?? 0n)}
+              </span>
             </li>
           ))}
         </ul>
