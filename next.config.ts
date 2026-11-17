@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
-// Next.js settings. Empty for now; we'll add things here only when needed.
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  // Load Circle's App Kit packages from node_modules at runtime instead of
+  // bundling them. The bundler otherwise fails on their optional Solana
+  // support (`@solana/kit`), which we don't use and don't install.
+  serverExternalPackages: [
+    "@circle-fin/app-kit",
+    "@circle-fin/adapter-circle-wallets",
+    "@circle-fin/developer-controlled-wallets",
+  ],
+};
 
 export default nextConfig;

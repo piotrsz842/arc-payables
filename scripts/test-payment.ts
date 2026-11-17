@@ -69,7 +69,7 @@ async function showBalance() {
 // Command 3: send USDC treasury → contractor (plain transfer, no memo)
 // ---------------------------------------------------------------------------
 async function send(amount: string, to?: string) {
-  to ??= requireEnv("CONTRACTOR_WALLET_ADDRESS");
+  to ||= requireEnv("CONTRACTOR_WALLET_ADDRESS"); // || so an empty address never reaches Circle
   const res = await circle.createTransaction({
     blockchain: BLOCKCHAIN,
     walletAddress: requireEnv("TREASURY_WALLET_ADDRESS"),

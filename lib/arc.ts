@@ -52,7 +52,7 @@ export const GATEWAY_API = "https://gateway-api-testnet.circle.com";
 // Arc's built-in Memo contract. EOA wallets only.
 export const MEMO_ADDRESS: Address = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505";
 // The Memo contract emits TWO events per call: BeforeMemo (just a counter)
-// and then Memo (the one with our invoice ID). List both so viem can read either.
+// and then Memo (the one with our payout ID). List both so viem can read either.
 export const memoAbi = parseAbi([
   "function memo(address target, bytes data, bytes32 memoId, bytes memoData)",
   "event BeforeMemo(uint256 indexed memoIndex)",
@@ -63,21 +63,21 @@ export const memoAbi = parseAbi([
 export const arcClient = createPublicClient({ chain: arcTestnet, transport: http() });
 
 /**
- * Turn an invoice ID into the memo's fixed-size fingerprint (bytes32).
- * Same invoice ID → same memoId, so the webhook can find the invoice again.
+ * Turn a payout ID into the memo's fixed-size fingerprint (bytes32).
+ * Same payout ID → same memoId, so anyone can find the payout on chain.
  */
-export function invoiceMemoId(invoiceId: string): Hex {
-  return keccak256(stringToHex(invoiceId));
+export function payoutMemoId(payoutId: string): Hex {
+  return keccak256(stringToHex(payoutId));
 }
 
 /**
  * Build the raw call: "Memo contract, please transfer `amountUsdc` USDC to
- * `to` on my behalf, and announce `invoiceId` next to it."
+ * `to` on my behalf, and announce `payoutId` next to it."
  *
- * PRIVACY: memos are public forever. Only put an invoice ID here,
+ * PRIVACY: memos are public forever. Only put a payout ID here,
  * never names, emails, or bank details.
  */
-export function buildMemoTransferCall(to: Address, amountUsdc: string, invoiceId: string): Hex {
+export function buildMemoTransferCall(to: Address, amountUsdc: string, payoutId: string): Hex {
   // Step 1: the inner instruction for the USDC contract: transfer(to, amount).
   const transferData = encodeFunctionData({
     abi: erc20Abi,
@@ -89,7 +89,7 @@ export function buildMemoTransferCall(to: Address, amountUsdc: string, invoiceId
   return encodeFunctionData({
     abi: memoAbi,
     functionName: "memo",
-    args: [USDC_ADDRESS, transferData, invoiceMemoId(invoiceId), stringToHex(invoiceId)],
+    args: [USDC_ADDRESS, transferData, payoutMemoId(payoutId), stringToHex(payoutId)],
   });
 }
 
@@ -111,7 +111,7 @@ export async function readMemoPayment(txHash: Hex) {
 
   return {
     success: receipt.status === "success",
-    invoiceText: memo ? hexToString(memo.args.memo) : null,
+    memoText: memo ? hexToString(memo.args.memo) : null,
     memoId: memo?.args.memoId ?? null,
     payer: memo?.args.sender ?? null,
     to: transfer?.args.to ?? null,

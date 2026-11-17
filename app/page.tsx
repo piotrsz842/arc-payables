@@ -3,10 +3,12 @@ import { EXPLORER } from "@/lib/arc";
 import { requireUser } from "@/lib/auth";
 import { toMicro, toUsd, totalsFor } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
+import { DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
 import { TOP_UP_AMOUNTS } from "@/lib/topup";
-import { topUpAction } from "./actions";
+import { cashOutAction, topUpAction } from "./actions";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // a cash-out to Base Sepolia waits for the bridge
 
 const money = (micro: bigint) => `$${Number(toUsd(micro)).toFixed(3)}`;
 
@@ -16,10 +18,25 @@ const TOPUP_MESSAGES: Record<string, string> = {
   failed: "That didn't work. Please try again.",
 };
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ uploaded?: string; topup?: string }> }) {
+const CASHOUT_MESSAGES: Record<string, string> = {
+  done: "Cash-out complete.",
+  bridge_failed: "The money reached your account, but the transfer to the other network didn't finish. See your cash-outs below.",
+};
+
+// Plain words for each payout status.
+const STATUS_WORDS: Record<PayoutDetail["status"], string> = {
+  sending: "sending…",
+  bridging: "transferring…",
+  done: "done",
+  bridge_failed: "in your account (transfer didn't finish)",
+  failed: "failed, money returned",
+};
+
+export default async function Home({ searchParams }: { searchParams: Promise<{ uploaded?: string; topup?: string; cashout?: string; cashout_error?: string }> }) {
   const user = await requireUser();
-  const { uploaded, topup } = await searchParams;
+  const { uploaded, topup, cashout, cashout_error } = await searchParams;
   const totals = await totalsFor(db, user.id);
+  const payouts = await listPayouts(db, user.id);
 
   // Earnings per note: sales rows → snippet → note.
   const { data: notes } = await db.from("notes").select("id, course, title, created_at").eq("author_id", user.id).order("created_at");
@@ -40,6 +57,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
       <h1 className="text-2xl font-bold">Hi {user.displayName}</h1>
       {uploaded && <p className="rounded bg-green-50 p-3 text-sm text-green-800">Notes uploaded: {uploaded} sections are now available to the tutor.</p>}
       {topup && <p className="rounded bg-slate-100 p-3 text-sm">{TOPUP_MESSAGES[topup]}</p>}
+      {cashout && <p className="rounded bg-green-50 p-3 text-sm text-green-800">{CASHOUT_MESSAGES[cashout]}</p>}
+      {cashout_error && <p className="rounded bg-red-50 p-3 text-sm text-red-800">{cashout_error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Your balance" value={money(totals.balance)} hint="Spend it on questions or cash it out" />
@@ -74,6 +93,57 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
             <button key={a} name="amount" value={a} className="rounded border bg-white px-4 py-2 text-sm">Add ${a}</button>
           ))}
         </form>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">Cash out</h2>
+        <form action={cashOutAction} className="flex flex-wrap items-end gap-2">
+          <label className="text-sm">
+            <span className="block text-slate-500">Amount ($)</span>
+            <input name="amount" inputMode="decimal" placeholder="0.25" required className="w-28 rounded border px-3 py-2" />
+          </label>
+          <label className="text-sm">
+            <span className="block text-slate-500">Send to</span>
+            <select name="destination" className="rounded border bg-white px-3 py-2">
+              {Object.entries(DESTINATIONS).map(([key, d]) => (
+                <option key={key} value={key}>
+                  {d.label} (min ${d.minUsd}{key === "base_sepolia" ? ", transfer fees apply" : ""})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white">Cash out</button>
+        </form>
+        {payouts.length > 0 && (
+          <ul className="divide-y rounded border bg-white text-sm">
+            {payouts.map((p) => (
+              <li key={p.id} className="p-3">
+                <div className="flex justify-between">
+                  <span>{new Date(p.createdAt).toLocaleDateString()} · ${Number(p.amountUsd).toFixed(3)} to {DESTINATIONS[p.detail.destination].label}</span>
+                  <span>{STATUS_WORDS[p.detail.status]}</span>
+                </div>
+                <details className="mt-1 text-xs text-slate-500">
+                  <summary className="cursor-pointer">details</summary>
+                  <p>Payout ID {p.detail.payoutId} (written on chain with the payment)</p>
+                  {p.detail.memoTx && (
+                    <p>
+                      Payment on Arc:{" "}
+                      <a className="underline" href={`${DESTINATIONS.arc.explorer}${p.detail.memoTx}`} target="_blank">view</a>
+                      {p.detail.memoVerified ? " · checked on chain" : ""}
+                    </p>
+                  )}
+                  {p.detail.bridgedUsd && <p>Sent ${p.detail.bridgedUsd} through Circle CCTP; fees about ${p.detail.feesUsd}</p>}
+                  {p.detail.bridgeSteps?.filter((s) => s.url).map((s) => (
+                    <p key={s.name}>
+                      {s.name}: <a className="underline" href={s.url} target="_blank">view</a>
+                    </p>
+                  ))}
+                  {p.detail.error && <p>Problem: {p.detail.error}</p>}
+                </details>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <details className="rounded border bg-white p-3 text-sm text-slate-600">
