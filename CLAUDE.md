@@ -99,6 +99,23 @@ Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript 7, Supabase (Postgr
 - Docs disagree on `validBefore` (7 days vs 3 days): use 7+.
 - Circle's hosted **Facilitator Service** (fallback a) settles each payment onchain via a Circle relayer; supports Arc (incl. `upto` on Arc testnet). Needs a Circle API key. URL/fees not yet read.
 - **VERSION WARNING:** npm has `@circle-fin/x402-batching` **4.0.0** (2026-10-22); docs/sample show 2.x–3.x. Read the installed package's `.d.ts` before relying on doc snippets. `@x402/core` / `@x402/evm` are 2.31.0.
+- **Read from the 4.0.0 `.d.ts` itself (2026-11-16):**
+  - `GatewayClientConfig = { chain, privateKey, rpcUrl?, headers?, token? }`: raw key only, no custom signer. Methods: `deposit(amount)`, `depositFor(amount, depositor)`, `getBalances()` → `{ wallet, gateway: { total, available, withdrawing, withdrawable, formatted* } }`, `supports(url)`, `pay(url, { method, body, headers })` → `{ data, amount, formattedAmount, transaction, status }`, `withdraw(amount, { chain?, recipient?, maxFee? })` (default maxFee 2.01 USDC).
+  - `GatewayClient` has x402 lifecycle hooks: `onBeforePaymentCreation(ctx)` can return `{ abort: true, reason }` (a last-line spending guard), `onAfterPaymentCreation`, `onPaymentResponse`.
+  - Custom signer path: `BatchEvmScheme({ address, signTypedData })` (used by the docs' Circle Wallets tab with `circle.signTypedData`).
+  - **`BatchFacilitatorClient` and `createGatewayMiddleware` DEFAULT TO MAINNET (`https://gateway-api.circle.com`).** Always pass `url` / `facilitatorUrl: "https://gateway-api-testnet.circle.com"`. Circle's sample calls `new BatchFacilitatorClient()` with no URL; don't copy that.
+  - New in 4.x: EIP-712 batching `extra.version` "1" or "2" (v2 adds `salt` = asset address, binding the signature to the token). Buyer signs either.
+  - SDK's own Arc testnet RPC default: `https://rpc.testnet.arc.network`.
+  - Also ships `createFacilitatorMiddleware` / `CircleFacilitatorClient` (fallback a: Circle Facilitator Service, `https://api.circle.com/v1/facilitator/x402`, settles each payment onchain, needs a seller-signed `Facilitator-Seller-Proof` header).
+  - `createGatewayMiddleware` is Express-only. For Next.js route handlers, call `BatchFacilitatorClient.settle(payload, requirements)` ourselves (pattern from `circlefin/arc-nanopayments` `lib/x402.ts`). Docs say settle() alone is enough (no verify first).
+  - Seller returns as soon as Gateway accepts; the onchain batch settles later ("often several minutes").
+  - **`@circle-fin/x402-batching/server` imports `@x402/evm` at runtime** despite it being "optional": install it.
+- **Stage 1 results (2026-11-16, this repo):**
+  - Deposit of 1 USDC (approve + deposit, ~0.003 USDC gas) became `available` in Gateway within ~1 minute on Arc testnet.
+  - `agent.pay()` round trip ~230–250 ms; buyer's Gateway `available` drops immediately; buyer's wallet pays no gas.
+  - `settle().transaction` is a **Circle transfer UUID**, not a tx hash (e.g. `8c8575ce-6ccb-4587-ba19-cf388d2bfd3d`).
+  - Seller's Gateway balance does NOT rise at accept time; it rises when Gateway settles the batch. So "author earnings go up immediately" must come from OUR ledger (recorded at settle-accept), not from reading Gateway.
+  - Forged signature → Gateway refuses (`success: false`, no `errorReason` given).
 
 ### App Kit Bridge / CCTP (read 2026-11-16, https://docs.arc.io/app-kit/quickstarts/bridge-tokens-across-blockchains)
 - `@circle-fin/app-kit` + `@circle-fin/adapter-circle-wallets` (already installed; swap tested with our wallets 2026-11-13). Lighter alternative: `@circle-fin/bridge-kit`.
@@ -122,4 +139,8 @@ Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript 7, Supabase (Postgr
 - `lib/circle.ts`: Circle client, `requireEnv`, `waitForTransaction`.
 - `lib/supabase/*`, `lib/auth.ts`, `proxy.ts`, `app/login/`: auth plumbing (carried over).
 - `scripts/register-entity-secret.ts`, `scripts/test-payment.ts`, `scripts/memo-payment.ts`: carried over (proven rails).
-- Status: pivot planned 2026-11-16. Next: Stage 1.
+- **Stage 1 code:** `lib/x402.ts` (`requirePayment(req, { priceUsd, description }, deliver)`: seller side, settles via testnet Gateway, pays to `TREASURY_WALLET_ADDRESS`), `app/api/snippets/[id]/route.ts` (2 hard-coded demo snippets at $0.001; 404 before any price), `scripts/agent-pay.ts` (`balance | deposit <usdc> | buy <id>`; `onBeforePaymentCreation` hook enforces a $0.01 per-payment cap), `scripts/make-agent-wallet.ts` (writes `AGENT_PRIVATE_KEY`/`AGENT_ADDRESS` to .env, prints address only). `npm run pay -- fund-agent <usdc>` sends platform → agent.
+- `proxy.ts` matcher excludes `api/snippets` (payment-protected, not login-protected).
+- `AGENTS.md` is auto-written by `next dev` (Next.js 16); committed so the tree stays clean.
+- Agent wallet: `0x8361242E4D4578D6BF70C36bC65191b1F24fb994` (funded 2 USDC from platform 2026-11-16; 1 USDC deposited to Gateway).
+- Status: **Stage 1 working 2026-11-16.** Next: Stage 2 (checker + budget + decision log).

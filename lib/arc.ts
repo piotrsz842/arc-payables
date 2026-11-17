@@ -48,6 +48,14 @@ export async function tokenBalance(token: Address, owner: Address): Promise<stri
 export const eurcBalance = (owner: Address) => tokenBalance(EURC_ADDRESS, owner);
 export const usdcBalance = (owner: Address) => tokenBalance(USDC_ADDRESS, owner);
 
+// --- Circle Gateway (Nanopayments) on Arc testnet ---
+// Source: https://developers.circle.com/gateway/references/contract-addresses
+// and the @circle-fin/x402-batching 4.0.0 package itself (checked 2026-11-16).
+export const ARC_NETWORK = "eip155:5042002"; // Arc testnet in x402's "CAIP-2" naming
+export const GATEWAY_WALLET: Address = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9"; // holds deposits
+// The SDK defaults to MAINNET. Always pass this URL on testnet.
+export const GATEWAY_API = "https://gateway-api-testnet.circle.com";
+
 // Arc's built-in Memo contract. EOA wallets only.
 export const MEMO_ADDRESS: Address = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505";
 // The Memo contract emits TWO events per call: BeforeMemo (just a counter)
