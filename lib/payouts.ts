@@ -24,8 +24,6 @@
  *   @circle-fin/bridge-kit README "Forwarder Integration" (installed 1.17.2)
  */
 import "server-only";
-import { createCircleWalletsAdapter } from "@circle-fin/adapter-circle-wallets";
-import { AppKit } from "@circle-fin/app-kit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isAddressEqual, type Address, type Hex } from "viem";
 import { buildMemoTransferCall, MEMO_ADDRESS, payoutMemoId, readMemoPayment } from "@/lib/arc";
@@ -165,6 +163,10 @@ async function verifyMemoPayment(txHash: Hex, to: Address, amount: bigint, payou
  * Base Sepolia to the author's same address (fee taken from the minted USDC).
  */
 async function planBridge(walletAddress: string, payout: bigint) {
+  // Loaded only when needed: App Kit is big, and if it ever fails to load,
+  // only this cash-out option breaks, not the whole dashboard.
+  const { createCircleWalletsAdapter } = await import("@circle-fin/adapter-circle-wallets");
+  const { AppKit } = await import("@circle-fin/app-kit");
   const adapter = createCircleWalletsAdapter({
     apiKey: requireEnv("CIRCLE_API_KEY"),
     entitySecret: requireEnv("CIRCLE_ENTITY_SECRET"),
