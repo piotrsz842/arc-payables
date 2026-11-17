@@ -35,13 +35,17 @@
 7. Agent answers, citing which notes it used, what it spent, and what was blocked and why.
 8. Author clicks **Cash out** and picks a destination: stay on Arc, or one other testnet chain via **CCTP**. Each payout carries its payout ID onchain via Arc's **Memo** extension. Explorer link sits behind a "details" toggle.
 
+### Additions (added 2026-11-16; build in Stage 3, not before)
+1. **Spendable earnings.** An author's earnings balance can pay for their own tutor questions, not just be cashed out. A student who uploads notes may never need to pay. Pitch line: **"Your notes pay for your tutoring."**
+2. **Free starter questions.** New users get a small number of free questions before needing a balance. Students who want more top up a small amount, shown in dollars.
+
 ### Hide the crypto (author and student screens)
 Email signup, dollar amounts, plain words ("earnings", "cash out"). No addresses, chain names or token names on main screens, except the cash-out destination dropdown. Technical details go behind "details".
 
 ### Build order (each stage must work before the next starts)
 1. **Stage 1 (riskiest, first, ~3h time-box):** standalone script: a buyer with a Gateway balance pays an x402-paywalled endpoint on Arc testnet via Gateway Nanopayments. Fallbacks in order: (a) Circle's hosted x402 Facilitator Service (docs say it supports Arc testnet), (b) last resort only: hand-written x402-style flow with a verified USDC transfer (Circle said plain sending is not enough).
 2. **Stage 2:** checker + budget in front of that payment, decision log in the DB. Include one deliberately irrelevant snippet and a looping scenario so a block can be demoed.
-3. **Stage 3:** email signup + wallet creation, note upload + snippet storage, tutor agent, sales ledger, author earnings.
+3. **Stage 3:** email signup + wallet creation, note upload + snippet storage, tutor agent, sales ledger, author earnings, plus the two additions below (spendable earnings, free starter questions).
 4. **Stage 4:** cash-out on Arc with a Memo, then CCTP cash-out to one other testnet chain.
 5. **Stage 5:** UI: upload page, tutor chat showing purchases/blocks live, author dashboard, "ask human" approval prompt.
 6. **Stage 6:** deploy to Vercel, seed 3–4 demo authors with notes the user writes, end-to-end test.
@@ -50,6 +54,7 @@ Email signup, dollar amounts, plain words ("earnings", "cash out"). No addresses
 
 ### README must include
 Architecture overview; the agent's decision loop and safety limits (checker, budget, loop detection, human approval); how we use Arc and which Circle protocols (Gateway Nanopayments, x402, Wallets, CCTP, Memo) and why each; every contract address used; setup instructions; what is simulated (testnet funds, seeded notes).
+- **"What's next" section** must mention: the platform would take a small cut per purchase to cover the cost of running the AI model.
 
 ## Rules for us
 - **Never commit `.env` or secrets.** The user enters keys themselves. Only `.env.example` with blank placeholders.
