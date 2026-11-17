@@ -14,7 +14,7 @@ const opts = { auth: { persistSession: false } };
 const server = createClient(url, requireEnv("SUPABASE_SECRET_KEY"), opts);
 const browser = createClient(url, requireEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"), opts);
 
-for (const table of ["profiles", "vendors", "budgets", "invoices", "audit_log"]) {
+for (const table of ["profiles", "vendors", "budgets", "invoices", "audit_log", "agent_runs", "purchase_decisions"]) {
   const s = await server.from(table).select("*", { count: "exact", head: true });
   const b = await browser.from(table).select("*").limit(1);
   const serverSees = s.error ? `ERROR ${s.error.message}` : `${s.count} rows`;

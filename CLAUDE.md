@@ -116,6 +116,7 @@ Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript 7, Supabase (Postgr
   - `settle().transaction` is a **Circle transfer UUID**, not a tx hash (e.g. `8c8575ce-6ccb-4587-ba19-cf388d2bfd3d`).
   - Seller's Gateway balance does NOT rise at accept time; it rises when Gateway settles the batch. So "author earnings go up immediately" must come from OUR ledger (recorded at settle-accept), not from reading Gateway.
   - Forged signature → Gateway refuses (`success: false`, no `errorReason` given).
+  - Batch settlement observed: the platform's Gateway balance went 0 → 0.003 USDC (3 purchases) ~7 min after the first purchase.
 
 ### App Kit Bridge / CCTP (read 2026-11-16, https://docs.arc.io/app-kit/quickstarts/bridge-tokens-across-blockchains)
 - `@circle-fin/app-kit` + `@circle-fin/adapter-circle-wallets` (already installed; swap tested with our wallets 2026-11-13). Lighter alternative: `@circle-fin/bridge-kit`.
@@ -143,4 +144,10 @@ Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript 7, Supabase (Postgr
 - `proxy.ts` matcher excludes `api/snippets` (payment-protected, not login-protected).
 - `AGENTS.md` is auto-written by `next dev` (Next.js 16); committed so the tree stays clean.
 - Agent wallet: `0x8361242E4D4578D6BF70C36bC65191b1F24fb994` (funded 2 USDC from platform 2026-11-16; 1 USDC deposited to Gateway).
-- Status: **Stage 1 working 2026-11-16.** Next: Stage 2 (checker + budget + decision log).
+- **Stage 2 code:**
+  - `lib/checker.ts`: `checkPurchase(snippetId, input, history)` → allow / block / ask_human with a `rule`. Order (cheapest first): loop (≥6 proposals, or re-proposing a blocked snippet) → duplicate → per-snippet cap $0.01 → question budget → Gateway balance → relevance (isolated Claude call: `claude-opus-5-5`, effort low, structured output, server-side fallbacks on; sees ONLY question, preview, reason, price, budget; told preview/reason are untrusted) → approval threshold $0.005 → allow. Relevance check failing (no key, refusal, outage) → ask_human (`checker_unavailable`), never allow.
+  - `lib/purchases.ts`: `startRun`, `proposePurchase` (history read from `purchase_decisions`, decision logged BEFORE paying, human answer + payment written back), `finishRun`.
+  - `lib/demo-snippets.ts`: 4 demo snippets (demo-2 = irrelevant ECON note; demo-4 = $0.008 → approval threshold). `GET /api/snippets` = free previews (no content).
+  - `supabase/stage2.sql`: `agent_runs`, `purchase_decisions` (RLS on, no policies). **The user runs it in the Supabase SQL Editor.**
+  - `scripts/stage2-demo.ts` (`npm run stage2-demo [-- --human=yes|no]`): scripted proposals showing allow, relevance block, duplicate, ask_human, loop stop. `scripts/test-checker.ts` (`npm run test-checker`): rule tests, no money/DB.
+- Status: **Stage 1 working 2026-11-16. Stage 2 code written, rule tests pass**; end-to-end demo waits on the user running `supabase/stage2.sql` and adding `ANTHROPIC_API_KEY`.

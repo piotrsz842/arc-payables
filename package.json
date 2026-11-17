@@ -18,7 +18,9 @@
     "samples": "tsx scripts/make-sample-invoices.ts",
     "test-extract": "tsx --env-file=.env scripts/test-extract.ts",
     "make-agent-wallet": "tsx --env-file=.env scripts/make-agent-wallet.ts",
-    "agent-pay": "tsx --env-file=.env scripts/agent-pay.ts"
+    "agent-pay": "tsx --env-file=.env scripts/agent-pay.ts",
+    "stage2-demo": "tsx --env-file=.env scripts/stage2-demo.ts",
+    "test-checker": "tsx --env-file=.env scripts/test-checker.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
