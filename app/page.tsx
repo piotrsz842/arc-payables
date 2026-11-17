@@ -6,6 +6,7 @@ import { db } from "@/lib/supabase/admin";
 import { DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
 import { TOP_UP_AMOUNTS } from "@/lib/topup";
 import { cashOutAction, topUpAction } from "./actions";
+import { SubmitButton } from "./submit-button";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // a cash-out to Base Sepolia waits for the bridge
@@ -32,16 +33,22 @@ const STATUS_WORDS: Record<PayoutDetail["status"], string> = {
   failed: "failed, money returned",
 };
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ uploaded?: string; topup?: string; cashout?: string; cashout_error?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ topup?: string; cashout?: string; cashout_error?: string }> }) {
   const user = await requireUser();
-  const { uploaded, topup, cashout, cashout_error } = await searchParams;
+  const { topup, cashout, cashout_error } = await searchParams;
   const totals = await totalsFor(db, user.id);
   const payouts = await listPayouts(db, user.id);
 
   // Earnings per note: sales rows → snippet → note.
   const { data: notes } = await db.from("notes").select("id, course, title, created_at").eq("author_id", user.id).order("created_at");
-  const { data: snippets } = await db.from("snippets").select("id, note_id").eq("author_id", user.id);
-  const { data: sales } = await db.from("ledger_entries").select("snippet_id, amount_usd").eq("user_id", user.id).eq("kind", "sale");
+  const { data: snippets } = await db.from("snippets").select("id, note_id, title").eq("author_id", user.id);
+  const { data: sales } = await db
+    .from("ledger_entries")
+    .select("snippet_id, amount_usd, created_at")
+    .eq("user_id", user.id)
+    .eq("kind", "sale")
+    .order("created_at", { ascending: false });
+  const snippetTitle = new Map((snippets ?? []).map((s) => [s.id, s.title]));
   const noteOf = new Map((snippets ?? []).map((s) => [s.id, s.note_id]));
   const earnedByNote = new Map<string, bigint>();
   const soldByNote = new Map<string, number>();
@@ -55,7 +62,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Hi {user.displayName}</h1>
-      {uploaded && <p className="rounded bg-green-50 p-3 text-sm text-green-800">Notes uploaded: {uploaded} sections are now available to the tutor.</p>}
       {topup && <p className="rounded bg-slate-100 p-3 text-sm">{TOPUP_MESSAGES[topup]}</p>}
       {cashout && <p className="rounded bg-green-50 p-3 text-sm text-green-800">{CASHOUT_MESSAGES[cashout]}</p>}
       {cashout_error && <p className="rounded bg-red-50 p-3 text-sm text-red-800">{cashout_error}</p>}
@@ -77,7 +83,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
         <ul className="divide-y rounded border bg-white">
           {(notes ?? []).map((n) => (
             <li key={n.id} className="flex justify-between p-3 text-sm">
-              <span><span className="font-medium">{n.course}</span> · {n.title}</span>
+              <Link href={`/notes/${n.id}`} className="hover:underline"><span className="font-medium">{n.course}</span> · {n.title}</Link>
               <span>
                 {soldByNote.get(n.id) ?? 0} {soldByNote.get(n.id) === 1 ? "use" : "uses"} · earned {money(earnedByNote.get(n.id) ?? 0n)}
               </span>
@@ -86,11 +92,28 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
         </ul>
       </section>
 
+      {(sales ?? []).length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">Recent sales</h2>
+          <ul className="divide-y rounded border bg-white text-sm">
+            {(sales ?? []).slice(0, 8).map((s, i) => (
+              <li key={i} className="flex justify-between p-3">
+                <span>
+                  The tutor used “{snippetTitle.get(s.snippet_id) ?? "a section"}”{" "}
+                  <span className="text-slate-400">{new Date(s.created_at).toLocaleString()}</span>
+                </span>
+                <span className="font-medium text-green-700">+{money(toMicro(s.amount_usd))}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Add money</h2>
         <form action={topUpAction} className="flex flex-wrap gap-2">
           {TOP_UP_AMOUNTS.map((a) => (
-            <button key={a} name="amount" value={a} className="rounded border bg-white px-4 py-2 text-sm">Add ${a}</button>
+            <SubmitButton key={a} name="amount" value={a} pendingText="Adding…" className="rounded border bg-white px-4 py-2 text-sm">Add ${a}</SubmitButton>
           ))}
         </form>
       </section>
@@ -112,7 +135,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ u
               ))}
             </select>
           </label>
-          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white">Cash out</button>
+          <SubmitButton pendingText="Sending… (up to 30 s)" className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white">Cash out</SubmitButton>
         </form>
         {payouts.length > 0 && (
           <ul className="divide-y rounded border bg-white text-sm">

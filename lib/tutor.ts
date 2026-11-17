@@ -17,7 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getAgent } from "./agent-wallet";
 import { recordEntry, toMicro, toUsd, totalsFor } from "./ledger";
-import { finishRun, proposePurchase, spentInRun, startRun, type AskHuman } from "./purchases";
+import { finishRun, proposePurchase, spentInRun, startRun, type AskHuman, type HumanAnswer } from "./purchases";
 import { getPreview, searchPreviews } from "./snippets";
 
 export const QUESTION_BUDGET_USD = "0.01"; // most one question may spend on snippets
@@ -41,14 +41,31 @@ Keep answers concise and clear. Don't mention prices, wallets, payments, or how 
 
 export type TutorResult = { runId: string; answer: string };
 
+/**
+ * What the tutor is doing, step by step, so the page can show it live.
+ * Only titles, prices and reasons: never note content or payment details.
+ */
+export type TutorEvent =
+  | { type: "started"; runId: string; free: boolean; budgetUsd: string }
+  | { type: "search"; query: string; course?: string; found: number }
+  | { type: "checking"; snippetId: string; title: string; priceUsd: string; reason: string }
+  | { type: "needs_approval"; logId: number; title: string; priceUsd: string; why: string }
+  | { type: "approval_result"; logId: number; answer: HumanAnswer }
+  | { type: "bought"; snippetId: string; title: string; priceUsd: string; authorName: string }
+  | { type: "not_bought"; snippetId: string; title: string; why: string }
+  | { type: "answer"; text: string }
+  | { type: "done"; runId: string; free: boolean; spentUsd: string; chargedUsd: string };
+
 export async function askTutor(opts: {
   db: SupabaseClient;
   baseUrl: string;
   user: { id: string; freeQuestionsLeft: number };
   question: string;
   askHuman: AskHuman;
+  onEvent?: (event: TutorEvent) => void;
 }): Promise<TutorResult> {
   const { db, user, question } = opts;
+  const emit = opts.onEvent ?? (() => {});
 
   // 1. Who pays? A free question, or the student's balance.
   let freeQuestion = false;
@@ -70,6 +87,7 @@ export async function askTutor(opts: {
   }
 
   const run = await startRun(db, { question, budgetUsd: toUsd(budget), askedBy: user.id, freeQuestion });
+  emit({ type: "started", runId: run.id, free: freeQuestion, budgetUsd: toUsd(budget) });
   const agent = getAgent();
 
   // 2. The tools.
@@ -83,6 +101,7 @@ export async function askTutor(opts: {
     run: async ({ query, course }) => {
       let found = await searchPreviews(db, { query, course, excludeAuthorId: user.id });
       if (found.length === 0 && course) found = await searchPreviews(db, { query, excludeAuthorId: user.id });
+      emit({ type: "search", query, course, found: found.length });
       if (found.length === 0) return "No matching notes.";
       return JSON.stringify(found.map(({ authorId: _a, ...p }) => p));
     },
@@ -99,11 +118,22 @@ export async function askTutor(opts: {
       const preview = await getPreview(db, snippet_id);
       if (!preview) return JSON.stringify({ status: "error", message: "No snippet with that id." });
       if (preview.authorId === user.id) return JSON.stringify({ status: "blocked", reason: "That is the student's own note." });
+      emit({ type: "checking", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, reason });
       const outcome = await proposePurchase({ db, agent, baseUrl: opts.baseUrl, run, preview, reason, askHuman: opts.askHuman });
-      if (outcome.paid) return JSON.stringify({ status: "bought", title: preview.title, content: outcome.content });
+      if (outcome.paid) {
+        const { data: author } = await db.from("profiles").select("display_name").eq("id", preview.authorId).single();
+        emit({ type: "bought", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, authorName: author?.display_name ?? "a student" });
+        return JSON.stringify({ status: "bought", title: preview.title, content: outcome.content });
+      }
+      const why =
+        outcome.humanDecision === "denied" ? "You said no."
+        : outcome.humanDecision === "pending" ? "No answer from you in time, so it was skipped."
+        : outcome.decision.reason;
+      emit({ type: "not_bought", snippetId: preview.id, title: preview.title, why });
       if (outcome.decision.verdict === "ask_human" && outcome.humanDecision === "pending") {
         return JSON.stringify({ status: "needs_student_approval", reason: outcome.decision.reason });
       }
+      if (outcome.humanDecision === "denied") return JSON.stringify({ status: "blocked", reason: "The student declined this purchase." });
       return JSON.stringify({ status: "blocked", reason: outcome.decision.reason });
     },
   });
@@ -133,6 +163,8 @@ export async function askTutor(opts: {
     answer = "Sorry, something went wrong while answering. You were only charged for notes that were actually used.";
   }
 
+  emit({ type: "answer", text: answer });
+
   // 4. Charge the student (unless free) for what was actually bought, from the log.
   const spent = await spentInRun(db, run.id);
   const charged = freeQuestion ? 0n : spent;
@@ -145,6 +177,7 @@ export async function askTutor(opts: {
     answer,
     chargedUsd: toUsd(charged),
   });
+  emit({ type: "done", runId: run.id, free: freeQuestion, spentUsd: toUsd(spent), chargedUsd: toUsd(charged) });
   return { runId: run.id, answer };
 }
 

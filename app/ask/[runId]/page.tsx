@@ -16,6 +16,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
 
   const used = decisions.filter((d) => d.paid);
   const blocked = decisions.filter((d) => d.verdict === "block" || d.human_decision === "denied");
+  // Needed the student's OK but got no answer before the tutor moved on.
   const waiting = decisions.filter((d) => d.verdict === "ask_human" && !d.human_decision);
 
   return (
@@ -35,10 +36,10 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
           </p>
         ))}
 
-        {waiting.length > 0 && <h2 className="pt-2 font-semibold">Waiting for your OK</h2>}
+        {waiting.length > 0 && <h2 className="pt-2 font-semibold">Skipped (needed your OK, no answer in time)</h2>}
         {waiting.map((d) => (
           <p key={d.id}>
-            ? <span className="font-medium">{d.title}</span> · {cents(d.price_usd)}
+            – <span className="font-medium">{d.title}</span> · {cents(d.price_usd)}
             <span className="block pl-4 text-slate-500">{d.checker_reason}</span>
           </p>
         ))}

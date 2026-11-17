@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SubmitButton } from "@/app/submit-button";
 import { signUp } from "./actions";
 
 const ERRORS: Record<string, string> = {
@@ -26,7 +27,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         Password
         <input name="password" type="password" minLength={8} required className="mt-1 w-full rounded border px-3 py-2" />
       </label>
-      <button className="w-full rounded bg-slate-900 py-2 font-medium text-white">Sign up</button>
+      <SubmitButton pendingText="Creating your account…" className="w-full rounded bg-slate-900 py-2 font-medium text-white">Sign up</SubmitButton>
       <p className="text-sm text-slate-500">
         Already have an account? <Link href="/login" className="underline">Sign in</Link>
       </p>

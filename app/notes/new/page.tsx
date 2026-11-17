@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { SubmitButton } from "@/app/submit-button";
 import { uploadNote } from "./actions";
 
 const ERRORS: Record<string, string> = {
@@ -35,7 +36,8 @@ export default async function NewNotePage({ searchParams }: { searchParams: Prom
         …or upload a .txt / .md file
         <input name="file" type="file" accept=".txt,.md,text/plain,text/markdown" className="mt-1 block text-sm" />
       </label>
-      <button className="rounded bg-slate-900 px-4 py-2 font-medium text-white">Upload</button>
+      <SubmitButton pendingText="Splitting your notes and writing previews…">Upload</SubmitButton>
+      <p className="text-xs text-slate-400">This takes about 10–30 seconds.</p>
     </form>
   );
 }

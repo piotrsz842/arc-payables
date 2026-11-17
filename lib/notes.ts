@@ -104,7 +104,7 @@ export async function describeChunks(course: string, noteTitle: string, chunks: 
 export async function saveNote(
   db: SupabaseClient,
   note: { authorId: string; course: string; title: string; body: string; idPrefix?: string },
-): Promise<number> {
+): Promise<{ noteId: string; sections: number }> {
   const course = normalizeCourse(note.course);
   const chunks = splitNote(note.body);
   if (chunks.length === 0) throw new Error("The note is empty.");
@@ -134,5 +134,5 @@ export async function saveNote(
     await db.from("notes").delete().eq("id", saved.id); // don't leave a note without snippets
     throw new Error(`Could not save snippets: ${snippetError.message}`);
   }
-  return rows.length;
+  return { noteId: saved.id, sections: rows.length };
 }

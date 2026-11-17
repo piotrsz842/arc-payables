@@ -20,12 +20,12 @@ export async function uploadNote(formData: FormData) {
   if (!course || !title || !body) redirect("/notes/new?error=missing");
   if (body.length > MAX_CHARS) redirect("/notes/new?error=long");
 
-  let count: number;
+  let noteId: string;
   try {
-    count = await saveNote(db, { authorId: user.id, course, title, body });
+    ({ noteId } = await saveNote(db, { authorId: user.id, course, title, body }));
   } catch (err) {
     console.error("Note upload failed:", err);
     redirect("/notes/new?error=failed");
   }
-  redirect(`/?uploaded=${count}`);
+  redirect(`/notes/${noteId}?uploaded=1`); // show the author what the tutor will see
 }
