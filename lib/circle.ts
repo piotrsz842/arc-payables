@@ -12,9 +12,26 @@ export function requireEnv(name: string): string {
 
 // Every Circle call goes through this client. The SDK encrypts the entity
 // secret into a fresh single-use ciphertext for each request.
-export const circle = initiateDeveloperControlledWalletsClient({
-  apiKey: requireEnv("CIRCLE_API_KEY"),
-  entitySecret: requireEnv("CIRCLE_ENTITY_SECRET"),
+//
+// Created on FIRST USE, not when this file loads: Next.js loads every page
+// while building, and the build must not need (or crash without) the keys.
+type CircleClient = ReturnType<typeof initiateDeveloperControlledWalletsClient>;
+let client: CircleClient | undefined;
+function getCircle(): CircleClient {
+  client ??= initiateDeveloperControlledWalletsClient({
+    apiKey: requireEnv("CIRCLE_API_KEY"),
+    entitySecret: requireEnv("CIRCLE_ENTITY_SECRET"),
+  });
+  return client;
+}
+
+/** Use like the real client (`circle.createWallets(...)`); it's created on the first call. */
+export const circle = new Proxy({} as CircleClient, {
+  get(_target, name) {
+    const real = getCircle();
+    const value = Reflect.get(real, name);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
 });
 
 const FINAL_STATES = ["COMPLETE", "FAILED", "CANCELLED", "DENIED"];
