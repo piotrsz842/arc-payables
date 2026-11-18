@@ -5,10 +5,18 @@
  * CHAIN through Arc's Memo contract, so anyone can match a payment on Arc to
  * our ledger row, without any name or email being public.
  *
+ * Where the money comes from: the platform's Circle GATEWAY balance, i.e. the
+ * income from x402 sales. Each cash-out is a Gateway withdrawal (burn intent
+ * signed by the platform wallet → Circle attestation → gatewayMint to the
+ * author), and that mint call is wrapped in Arc's Memo contract. One Arc
+ * transaction: funded by sales income, paid to the author, payout ID on chain.
+ * Authors can cash out what their notes EARNED; money they added (top-ups)
+ * is for asking questions.
+ *
  * Two destinations:
- *   "arc"          platform wallet → author's wallet on Arc, with the memo.
- *                  One transaction, the platform pays the (tiny) gas.
- *   "base_sepolia" the same Arc memo payment, THEN the author's wallet bridges
+ *   "arc"          the Gateway → author payment above. The platform pays the
+ *                  small fees (Gateway burn gas ~$0.0035 + Arc gas).
+ *   "base_sepolia" the same Arc payment, THEN the author's wallet bridges
  *                  the money to Base Sepolia with CCTP (Circle's burn-and-mint
  *                  bridge) through App Kit. Circle's forwarder does the
  *                  Base Sepolia side, so nobody needs gas on Base Sepolia.
@@ -26,9 +34,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isAddressEqual, type Address, type Hex } from "viem";
-import { buildMemoTransferCall, MEMO_ADDRESS, payoutMemoId, readMemoPayment } from "@/lib/arc";
+import { encodeFunctionData, stringToHex } from "viem";
+import { getAgent } from "@/lib/agent-wallet";
+import { MEMO_ADDRESS, memoAbi, payoutMemoId, readMemoPayment } from "@/lib/arc";
 import { circle, requireEnv, waitForTransaction } from "@/lib/circle";
-import { toMicro, totalsFor, toUsd } from "@/lib/ledger";
+import { GATEWAY_MINTER, platformGatewayMintCall } from "@/lib/gateway";
+import { toMicro, totalsFor, toUsd, type Totals } from "@/lib/ledger";
 
 export const DESTINATIONS = {
   arc: { label: "Arc", minUsd: "0.01", explorer: "https://explorer.testnet.arc.io/tx/" },
@@ -53,6 +64,20 @@ export type PayoutDetail = {
 
 export class CashOutError extends Error {}
 
+/** What an author may cash out: what their notes earned and haven't cashed out or spent. */
+export function cashableOf(t: Totals): bigint {
+  const unpaidEarnings = t.earnings - t.paidOut;
+  const c = unpaidEarnings < t.balance ? unpaidEarnings : t.balance;
+  return c > 0n ? c : 0n;
+}
+
+/** The platform's Gateway income available right now (sales settle into it in batches). */
+async function platformGatewayAvailable(): Promise<bigint> {
+  const b = await getAgent().getBalances(requireEnv("TREASURY_WALLET_ADDRESS") as Address); // balances are public
+  return b.gateway.available;
+}
+const GATEWAY_FEE_BUFFER_USD = "0.01"; // Gateway takes its burn gas (~$0.0035) from the same balance
+
 // Arc gas reserve if App Kit can't estimate approve + burn (estimate was ~$0.032).
 const FALLBACK_ARC_GAS_USD = "0.04";
 
@@ -76,6 +101,15 @@ export async function cashOut(
   if (amount < min) throw new CashOutError(`The minimum for ${DESTINATIONS[destination].label} is $${DESTINATIONS[destination].minUsd}.`);
   const before = await totalsFor(db, user.id);
   if (amount > before.balance) throw new CashOutError("That's more than your balance.");
+  const cashable = cashableOf(before);
+  if (amount > cashable) {
+    throw new CashOutError(`You can cash out what your notes earned: $${Number(toUsd(cashable)).toFixed(3)} right now. Money you added is for questions.`);
+  }
+  // Sales reach the platform's Gateway balance in batches, a few minutes later.
+  const income = await platformGatewayAvailable();
+  if (income < amount + toMicro(GATEWAY_FEE_BUFFER_USD)) {
+    throw new CashOutError("Your newest earnings are still being settled (this takes a few minutes). Please try again shortly.");
+  }
 
   // For Base Sepolia, work out the fees first: if they'd eat the whole
   // amount, stop here, before any money moves.
@@ -98,7 +132,7 @@ export async function cashOut(
     throw new CashOutError("That's more than your balance.");
   }
 
-  // --- 3. Platform wallet → author's Arc wallet, payout ID in the memo ---
+  // --- 3. Platform's Gateway income → author's Arc wallet, payout ID in the memo ---
   try {
     const memoTx = await sendMemoPayment(user.walletAddress as Address, toUsd(amount), detail.payoutId);
     detail.memoTx = memoTx;
@@ -125,12 +159,21 @@ export async function cashOut(
   }
 }
 
-/** Arc memo payment from the platform wallet. Returns the Arc tx hash. */
+/**
+ * Pay `to` from the platform's Gateway balance, with the payout ID as an Arc memo:
+ * Memo.memo(target = GatewayMinter, data = gatewayMint(attestation, signature), memoId, payoutId).
+ * Returns the Arc tx hash.
+ */
 async function sendMemoPayment(to: Address, amountUsd: string, payoutId: string): Promise<Hex> {
+  const mintCall = await platformGatewayMintCall(to, amountUsd);
   const res = await circle.createContractExecutionTransaction({
     walletId: requireEnv("TREASURY_WALLET_ID"),
     contractAddress: MEMO_ADDRESS,
-    callData: buildMemoTransferCall(to, amountUsd, payoutId),
+    callData: encodeFunctionData({
+      abi: memoAbi,
+      functionName: "memo",
+      args: [GATEWAY_MINTER, mintCall, payoutMemoId(payoutId), stringToHex(payoutId)],
+    }),
     fee: { type: "level", config: { feeLevel: "MEDIUM" } },
     refId: payoutId, // Circle-side label only
   });
