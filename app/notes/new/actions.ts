@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { saveNote } from "@/lib/notes";
+import { DuplicateContentError, saveNote } from "@/lib/notes";
 import { db } from "@/lib/supabase/admin";
 
 const MAX_CHARS = 60_000; // about 10,000 words: plenty for a study guide
@@ -26,6 +26,7 @@ export async function uploadNote(formData: FormData) {
   try {
     ({ noteId } = await saveNote(db, { authorId: user.id, course, title, body, ownWorkConfirmed: true }));
   } catch (err) {
+    if (err instanceof DuplicateContentError) redirect(`/notes/new?error=duplicate&detail=${encodeURIComponent(err.message)}`);
     console.error("Note upload failed:", err);
     redirect("/notes/new?error=failed");
   }

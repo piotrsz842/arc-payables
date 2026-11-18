@@ -13,6 +13,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { embed, embeddingsEnabled, sectionText, toVector } from "./embeddings";
 
 const TARGET_WORDS = 250;
 const MAX_SNIPPETS = 20;
@@ -114,6 +115,22 @@ export async function saveNote(
   if (chunks.length === 0) throw new Error("The note is empty.");
   const previews = await describeChunks(course, note.title, chunks);
 
+  // Meaning vectors for each section (if Voyage is set up), and the
+  // near-duplicate check: nothing that is almost the same as an existing
+  // section, or as a past tutor answer (i.e. AI output), gets listed.
+  let vectors: number[][] | null = null;
+  if (embeddingsEnabled()) {
+    try {
+      vectors = await embed(
+        chunks.map((content, i) => sectionText({ course, title: previews[i].title, summary: previews[i].summary, content })),
+        "document",
+      );
+    } catch (err) {
+      console.error("Embedding failed; saving without vectors (run npm run embed-backfill later):", err);
+    }
+    if (vectors) await rejectNearDuplicates(db, vectors, previews.map((p) => p.title));
+  }
+
   const { data: saved, error } = await db
     .from("notes")
     .insert({ author_id: note.authorId, course, title: note.title.trim(), body: note.body, own_work_confirmed: note.ownWorkConfirmed ?? false })
@@ -133,10 +150,41 @@ export async function saveNote(
     content,
     price_usd: note.priceUsd ?? priceFor(content),
   }));
-  const { error: snippetError } = await db.from("snippets").insert(rows);
+  const { data: inserted, error: snippetError } = await db.from("snippets").insert(rows).select("id, position");
   if (snippetError) {
     await db.from("notes").delete().eq("id", saved.id); // don't leave a note without snippets
     throw new Error(`Could not save snippets: ${snippetError.message}`);
   }
+  if (vectors) {
+    for (const r of inserted ?? []) {
+      const { error: vErr } = await db.from("snippets").update({ embedding: toVector(vectors[r.position]) }).eq("id", r.id);
+      if (vErr) console.error("Could not store embedding for", r.id, vErr.message);
+    }
+  }
   return { noteId: saved.id, sections: rows.length };
+}
+
+// Similarity (cosine, 0–1) at or above which an upload counts as a copy.
+export const DUPLICATE_OF_SECTION = 0.95;
+export const DUPLICATE_OF_ANSWER = 0.9;
+
+export class DuplicateContentError extends Error {}
+
+/** Throw if any new section is nearly identical to an existing section or a past tutor answer. */
+async function rejectNearDuplicates(db: SupabaseClient, vectors: number[][], titles: string[]) {
+  for (const [i, v] of vectors.entries()) {
+    const { data, error } = await db.rpc("nearest_existing", { query_embedding: toVector(v) });
+    if (error) {
+      console.error("Near-duplicate check unavailable (migration 005 not run?):", error.message);
+      return; // search setup missing: don't block uploads over it
+    }
+    for (const hit of (data ?? []) as { kind: string; id: string; similarity: number }[]) {
+      if (hit.kind === "snippet" && hit.similarity >= DUPLICATE_OF_SECTION) {
+        throw new DuplicateContentError(`"${titles[i]}" is almost identical to a study guide that's already listed.`);
+      }
+      if (hit.kind === "answer" && hit.similarity >= DUPLICATE_OF_ANSWER) {
+        throw new DuplicateContentError(`"${titles[i]}" is almost identical to an answer our AI tutor wrote. Please upload your own work.`);
+      }
+    }
+  }
 }

@@ -3,6 +3,7 @@
  * content (only for the x402 endpoint, after payment).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { embed, embeddingsEnabled, toVector } from "./embeddings";
 import { authorRatings } from "./integrity";
 import { normalizeCourse } from "./notes";
 
@@ -28,11 +29,14 @@ const toPreview = (r: PreviewRow): SnippetPreview => ({
 });
 
 /**
- * Find previews for a question. Simple keyword scoring over title + summary
- * (plenty for a hackathon-sized library; a real one would use full-text or
- * vector search). Never returns content. Reported (flagged) sections are
- * not for sale, so they never show up. Equally relevant sections are ordered
- * by their author's answer ratings.
+ * Find previews for a question. HYBRID search, course first:
+ *   - meaning: pgvector cosine similarity between the question and each
+ *     section (Voyage embeddings), filtered to the course in Postgres
+ *   - keywords: how many of the question's words appear in title + preview
+ *   score = similarity + 0.05 per keyword hit; ratings break ties.
+ * Without embeddings (no key / not set up) it's keyword-only, as before.
+ * Never returns content. Reported (flagged) sections are not for sale, so
+ * they never show up.
  */
 export async function searchPreviews(
   db: SupabaseClient,
@@ -45,6 +49,7 @@ export async function searchPreviews(
   if (error) throw new Error(`Could not search snippets: ${error.message}`);
 
   const words = (opts.query ?? "").toLowerCase().match(/[a-z0-9^]{3,}/g) ?? [];
+  const similarity = opts.query ? await meaningScores(db, opts.query, opts.course, opts.excludeAuthorId) : null;
   const ratings = await authorRatings(db);
   const rating = (authorId: string) => {
     const r = ratings.get(authorId);
@@ -52,13 +57,43 @@ export async function searchPreviews(
   };
   const scored = data.map((row) => {
     const text = `${row.title} ${row.summary}`.toLowerCase();
-    return { row, score: words.filter((w) => text.includes(w)).length, rating: rating(row.author_id) };
+    const hits = words.filter((w) => text.includes(w)).length;
+    const sim = similarity?.get(row.id);
+    return {
+      row,
+      // keep: any keyword hit, or close enough in meaning
+      keep: words.length === 0 || hits > 0 || (sim !== undefined && sim >= MIN_SIMILARITY),
+      score: similarity ? (sim ?? 0) + 0.05 * hits : hits,
+      rating: rating(row.author_id),
+    };
   });
   return scored
-    .filter((s) => words.length === 0 || s.score > 0)
+    .filter((s) => s.keep)
     .sort((a, b) => b.score - a.score || b.rating - a.rating) // relevance first, ratings break ties
     .slice(0, opts.limit ?? 8)
     .map((s) => toPreview(s.row));
+}
+
+// Below this cosine similarity a section isn't considered a match by meaning alone.
+const MIN_SIMILARITY = 0.35;
+
+/** id → similarity for the closest sections (pgvector), or null if meaning search isn't available. */
+async function meaningScores(db: SupabaseClient, query: string, course?: string, excludeAuthorId?: string) {
+  if (!embeddingsEnabled()) return null;
+  try {
+    const [v] = await embed([query], "query");
+    const { data, error } = await db.rpc("match_snippets", {
+      query_embedding: toVector(v),
+      match_course: course ? normalizeCourse(course) : null,
+      exclude_author: excludeAuthorId ?? null,
+      match_count: 30,
+    });
+    if (error) throw new Error(error.message);
+    return new Map(((data ?? []) as { id: string; similarity: number }[]).map((r) => [r.id, r.similarity]));
+  } catch (err) {
+    console.error("Meaning search unavailable, using keywords only:", err);
+    return null;
+  }
 }
 
 export async function getPreview(db: SupabaseClient, id: string): Promise<SnippetPreview | null> {

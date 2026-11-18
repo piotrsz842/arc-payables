@@ -16,6 +16,7 @@ import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getAgent } from "./agent-wallet";
+import { embed, embeddingsEnabled, toVector } from "./embeddings";
 import { recordEntry, toMicro, toUsd, totalsFor } from "./ledger";
 import { finishRun, proposePurchase, spentInRun, startRun, type AskHuman, type HumanAnswer } from "./purchases";
 import { getPreview, searchPreviews } from "./snippets";
@@ -178,6 +179,17 @@ export async function askTutor(opts: {
     chargedUsd: toUsd(charged),
   });
   emit({ type: "done", runId: run.id, free: freeQuestion, spentUsd: toUsd(spent), chargedUsd: toUsd(charged) });
+
+  // Remember the answer's meaning, so an upload that copies AI tutor output
+  // can be spotted (near-duplicate check). Best effort.
+  if (embeddingsEnabled()) {
+    try {
+      const [v] = await embed([answer], "document");
+      await db.from("agent_runs").update({ answer_embedding: toVector(v) }).eq("id", run.id);
+    } catch (err) {
+      console.error("Could not embed the answer:", err);
+    }
+  }
   return { runId: run.id, answer };
 }
 

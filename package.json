@@ -15,6 +15,7 @@
     "balances": "tsx --env-file=.env scripts/gateway-balances.ts",
     "outside-agent": "tsx --env-file=.env scripts/outside-agent.ts",
     "seed-notes": "tsx --conditions=react-server --env-file=.env scripts/seed-notes.ts",
+    "embed-backfill": "tsx --env-file=.env scripts/embed-backfill.ts",
     "reports": "tsx --env-file=.env scripts/reports.ts",
     "payout": "tsx --conditions=react-server --env-file=.env scripts/payout.ts",
     "bridge-estimate": "tsx --env-file=.env scripts/bridge-estimate.ts",

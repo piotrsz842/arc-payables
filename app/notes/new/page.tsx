@@ -7,11 +7,12 @@ const ERRORS: Record<string, string> = {
   own: "Please confirm this is your own work in your own words.",
   long: "That's too long. Please upload one study guide at a time.",
   failed: "Something went wrong saving your study guide. Please try again.",
+  duplicate: "Part of this study guide is almost identical to something already on the platform.",
 };
 
-export default async function NewNotePage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewNotePage({ searchParams }: { searchParams: Promise<{ error?: string; detail?: string }> }) {
   await requireUser();
-  const { error } = await searchParams;
+  const { error, detail } = await searchParams;
   return (
     <form action={uploadNote} className="mx-auto max-w-2xl space-y-4 rounded-lg border bg-white p-6">
       <h1 className="text-xl font-bold">Upload a study guide</h1>
@@ -20,7 +21,7 @@ export default async function NewNotePage({ searchParams }: { searchParams: Prom
         your course. We split it into short sections. The AI tutor sees only a one-line preview of each, and you earn every time it
         uses one.
       </p>
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{ERRORS[error]}</p>}
+      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error === "duplicate" && detail ? detail : ERRORS[error]}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm">
           Course
