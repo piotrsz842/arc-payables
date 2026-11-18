@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { getRunReceipt } from "@/lib/tutor";
+import { AnswerMarkdown } from "@/app/ui/markdown";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="rounded-lg border bg-white p-6">
         <p className="text-sm text-slate-500">{run.question}</p>
-        <div className="mt-3 whitespace-pre-wrap">{run.answer ?? "Still working…"}</div>
+        <div className="mt-3">{run.answer ? <AnswerMarkdown text={run.answer} /> : "Still working…"}</div>
       </div>
 
       <section className="space-y-2 text-sm">

@@ -1,217 +1,130 @@
+import { ArrowRight, BookOpen, ChevronRight, Layers, MessageCircle, Sparkles, ThumbsUp, Upload } from "lucide-react";
 import Link from "next/link";
-import { EXPLORER } from "@/lib/arc";
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { authorRatings } from "@/lib/integrity";
 import { toMicro, toUsd, totalsFor } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
-import { cashableOf, DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
-import { TOP_UP_AMOUNTS } from "@/lib/topup";
-import { topUpAction } from "./actions";
-import { SubmitButton } from "./submit-button";
+import { Landing } from "./ui/landing";
+import { Notice, usd } from "./ui/notice";
 
 export const dynamic = "force-dynamic";
 
+/** Signed out: the landing page. Signed in: home (ask box, quick actions, earnings, your guides). */
+export default async function Home({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return <Landing />;
+  const { deleted } = await searchParams;
 
-const money = (micro: bigint) => `$${Number(toUsd(micro)).toFixed(3)}`;
-
-const TOPUP_MESSAGES: Record<string, string> = {
-  ok: "Money added to your balance.",
-  nofunds: "Your account doesn't have enough test funds yet. Open “details” below to add some.",
-  failed: "That didn't work. Please try again.",
-};
-
-const CASHOUT_MESSAGES: Record<string, string> = {
-  done: "Cash-out complete.",
-  bridge_failed: "The money reached your account, but the transfer to the other network didn't finish. See your cash-outs below.",
-};
-
-// Plain words for each payout status.
-const STATUS_WORDS: Record<PayoutDetail["status"], string> = {
-  sending: "sending…",
-  bridging: "transferring…",
-  done: "done",
-  bridge_failed: "in your account (transfer didn't finish)",
-  failed: "failed, money returned",
-};
-
-export default async function Home({ searchParams }: { searchParams: Promise<{ topup?: string; cashout?: string; cashout_error?: string; deleted?: string }> }) {
-  const user = await requireUser();
-  const { topup, cashout, cashout_error, deleted } = await searchParams;
   const totals = await totalsFor(db, user.id);
-  const payouts = await listPayouts(db, user.id);
   const myRating = (await authorRatings(db)).get(user.id);
-
-  // Earnings per note: sales rows → snippet → note.
-  const { data: notes } = await db.from("notes").select("id, course, title, created_at, deleted_at").eq("author_id", user.id).order("created_at");
-  const { data: snippets } = await db.from("snippets").select("id, note_id, title").eq("author_id", user.id);
-  const { data: sales } = await db
-    .from("ledger_entries")
-    .select("snippet_id, amount_usd, created_at")
-    .eq("user_id", user.id)
-    .eq("kind", "sale")
-    .order("created_at", { ascending: false });
-  const snippetTitle = new Map((snippets ?? []).map((s) => [s.id, s.title]));
+  const { data: notes } = await db.from("notes").select("id, course, title, deleted_at").eq("author_id", user.id).order("created_at", { ascending: false });
+  const { data: snippets } = await db.from("snippets").select("id, note_id").eq("author_id", user.id);
+  const { data: sales } = await db.from("ledger_entries").select("snippet_id, amount_usd, created_at").eq("user_id", user.id).eq("kind", "sale");
   const noteOf = new Map((snippets ?? []).map((s) => [s.id, s.note_id]));
-  const earnedByNote = new Map<string, bigint>();
-  const soldByNote = new Map<string, number>();
-  for (const sale of sales ?? []) {
-    const noteId = noteOf.get(sale.snippet_id);
-    if (!noteId) continue;
-    earnedByNote.set(noteId, (earnedByNote.get(noteId) ?? 0n) + toMicro(sale.amount_usd));
-    soldByNote.set(noteId, (soldByNote.get(noteId) ?? 0) + 1);
+  const uses = new Map<string, number>();
+  const earned = new Map<string, bigint>();
+  let today = 0n;
+  const dayAgo = Date.now() - 24 * 3600 * 1000;
+  for (const s of sales ?? []) {
+    const n = noteOf.get(s.snippet_id);
+    if (n) {
+      uses.set(n, (uses.get(n) ?? 0) + 1);
+      earned.set(n, (earned.get(n) ?? 0n) + toMicro(s.amount_usd));
+    }
+    if (Date.parse(s.created_at) > dayAgo) today += toMicro(s.amount_usd);
   }
+  const firstName = user.displayName.split(" ")[0];
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Hi {user.displayName}</h1>
-      {topup && <p className="rounded bg-slate-100 p-3 text-sm">{TOPUP_MESSAGES[topup]}</p>}
-      {deleted && <p className="rounded bg-slate-100 p-3 text-sm">Study guide deleted. It is no longer sold; what it earned stays in your balance.</p>}
-      {cashout && <p className="rounded bg-green-50 p-3 text-sm text-green-800">{CASHOUT_MESSAGES[cashout]}</p>}
-      {cashout_error && <p className="rounded bg-red-50 p-3 text-sm text-red-800">{cashout_error}</p>}
+    <div className="mx-auto max-w-2xl space-y-6">
+      {deleted && <Notice>Study guide deleted. It's no longer sold, and what it earned stays yours.</Notice>}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Your balance" value={money(totals.balance)} hint="Spend it on questions; cash out what you earned" />
-        <Stat label="Earned from your study guides" value={money(totals.earnings)} hint="Every time the tutor uses them" />
-        <Stat label="Free questions left" value={String(user.freeQuestionsLeft)} hint="Then questions use your balance" />
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <Link href="/ask" className="rounded bg-slate-900 px-4 py-2 font-medium text-white">Ask the tutor</Link>
-        <Link href="/notes/new" className="rounded border px-4 py-2 font-medium">Upload a study guide</Link>
-      </div>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Your study guides</h2>
-        {myRating && (
-          <p className="text-sm text-slate-600">
-            Students rated answers that used your study guides: 👍 {myRating.up} · 👎 {myRating.down}
-          </p>
-        )}
-        {(notes ?? []).length === 0 && <p className="text-sm text-slate-500">No study guides yet. Upload one in your own words (explanations, worked examples, practice problems, exam tips) to start earning.</p>}
-        <ul className="divide-y rounded border bg-white">
-          {(notes ?? []).map((n) => (
-            <li key={n.id} className="flex justify-between p-3 text-sm">
-              <Link href={`/notes/${n.id}`} className={`hover:underline ${n.deleted_at ? "text-slate-400 line-through" : ""}`}><span className="font-medium">{n.course}</span> · {n.title}</Link>
-              <span>
-                {soldByNote.get(n.id) ?? 0} {soldByNote.get(n.id) === 1 ? "use" : "uses"} · earned {money(earnedByNote.get(n.id) ?? 0n)}
-                {n.deleted_at ? (
-                  <span className="ml-2 text-slate-400">deleted</span>
-                ) : (
-                  <Link href={`/notes/${n.id}/delete`} className="ml-3 text-xs text-red-700 underline">Delete</Link>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {(sales ?? []).length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Recent sales</h2>
-          <ul className="divide-y rounded border bg-white text-sm">
-            {(sales ?? []).slice(0, 8).map((s, i) => (
-              <li key={i} className="flex justify-between p-3">
-                <span>
-                  The tutor used “{snippetTitle.get(s.snippet_id) ?? "a section"}”{" "}
-                  <span className="text-slate-400">{new Date(s.created_at).toLocaleString()}</span>
-                </span>
-                <span className="font-medium text-green-700">+{money(toMicro(s.amount_usd))}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Add money</h2>
-        <form action={topUpAction} className="flex flex-wrap gap-2">
-          {TOP_UP_AMOUNTS.map((a) => (
-            <SubmitButton key={a} name="amount" value={a} pendingText="Adding…" className="rounded border bg-white px-4 py-2 text-sm">Add ${a}</SubmitButton>
-          ))}
+      <section className="space-y-3">
+        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Hi {firstName}, what are you studying?</h1>
+        {/* Ask straight from home: goes to the chat and starts right away. */}
+        <form action="/ask" method="get" className="card flex items-center gap-2 p-2 pl-4">
+          <MessageCircle size={18} className="shrink-0 text-black/40" aria-hidden />
+          <input name="q" required placeholder="Ask about your course, e.g. CPSC 221 quicksort" className="min-w-0 flex-1 bg-transparent py-2 text-[15px] outline-none placeholder:text-black/35" />
+          <button className="btn-primary px-3" aria-label="Ask"><ArrowRight size={18} aria-hidden /></button>
         </form>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Cash out</h2>
-        <p className="text-sm text-slate-600">
-          You can cash out what your study guides earned: <span className="font-medium">{money(cashableOf(totals))}</span> right now.
-          Money you added is for asking questions.
+        <p className="text-sm text-black/50">
+          {user.freeQuestionsLeft > 0
+            ? `${user.freeQuestionsLeft} free question${user.freeQuestionsLeft === 1 ? "" : "s"} left`
+            : `Questions use your balance (${usd(toUsd(totals.balance))}), at most $0.01 each`}
         </p>
-        {/* Goes to a confirm screen that shows fees and the amount that arrives. */}
-        <form action="/cash-out" method="get" className="flex flex-wrap items-end gap-2">
-          <label className="text-sm">
-            <span className="block text-slate-500">Amount ($)</span>
-            <input name="amount" inputMode="decimal" placeholder="0.25" required className="w-28 rounded border px-3 py-2" />
-          </label>
-          <label className="text-sm">
-            <span className="block text-slate-500">Send to</span>
-            <select name="to" className="rounded border bg-white px-3 py-2">
-              {Object.entries(DESTINATIONS).map(([key, d]) => (
-                <option key={key} value={key}>
-                  {d.label} (min ${d.minUsd}{key === "base_sepolia" ? ", transfer fees apply" : ", no fee"})
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white">Review cash-out</button>
-        </form>
-        {payouts.length > 0 && (
-          <ul className="divide-y rounded border bg-white text-sm">
-            {payouts.map((p) => (
-              <li key={p.id} className="p-3">
-                <div className="flex justify-between">
-                  <span>{new Date(p.createdAt).toLocaleDateString()} · ${Number(p.amountUsd).toFixed(3)} to {DESTINATIONS[p.detail.destination].label}</span>
-                  <span>
-                    {STATUS_WORDS[p.detail.status]}
-                    {p.detail.onchain && <span className="ml-2 text-xs text-green-700">✓ confirmed on chain</span>}
-                  </span>
-                </div>
-                <details className="mt-1 text-xs text-slate-500">
-                  <summary className="cursor-pointer">details</summary>
-                  <p>Payout ID {p.detail.payoutId} (written on chain with the payment)</p>
-                  {p.detail.memoTx && (
-                    <p>
-                      Payment on Arc:{" "}
-                      <a className="underline" href={`${DESTINATIONS.arc.explorer}${p.detail.memoTx}`} target="_blank">view</a>
-                      {p.detail.memoVerified ? " · checked on chain" : ""}
-                    </p>
-                  )}
-                  {p.detail.bridgedUsd && <p>Sent ${p.detail.bridgedUsd} through Circle CCTP; fees about ${p.detail.feesUsd}</p>}
-                  {p.detail.bridgeSteps?.filter((s) => s.url).map((s) => (
-                    <p key={s.name}>
-                      {s.name}: <a className="underline" href={s.url} target="_blank">view</a>
-                    </p>
-                  ))}
-                  {p.detail.onchain && <p>Confirmed on chain by an independent {p.detail.onchain.by} watching Arc ({new Date(p.detail.onchain.at).toLocaleString()})</p>}
-                  {p.detail.error && <p>Problem: {p.detail.error}</p>}
-                </details>
+      </section>
+
+      <section className="grid grid-cols-3 gap-3">
+        <QuickAction href="/ask" icon={MessageCircle} label="Ask the tutor" />
+        <QuickAction href="/study" icon={Layers} label="Quiz & flashcards" />
+        <QuickAction href="/notes/new" icon={Upload} label="Upload a guide" />
+      </section>
+
+      <Link href="/earnings" className="card flex items-center justify-between gap-4 p-5 transition hover:border-brand-200">
+        <div>
+          <div className="text-sm text-black/55">Your study guides earned</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold tracking-tight">{usd(toUsd(totals.earnings))}</span>
+            {today > 0n && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">+{usd(toUsd(today))} today</span>}
+          </div>
+          <div className="text-sm text-black/55">Pays for your questions, or cash it out</div>
+        </div>
+        <ChevronRight className="text-black/30" aria-hidden />
+      </Link>
+
+      <section className="space-y-3">
+        <div className="flex items-end justify-between">
+          <h2 className="text-lg font-bold">Your study guides</h2>
+          {myRating && (
+            <span className="flex items-center gap-1 text-sm text-black/55">
+              <ThumbsUp size={14} aria-hidden /> {myRating.up} helpful · {myRating.down} not
+            </span>
+          )}
+        </div>
+        {(notes ?? []).length === 0 ? (
+          <Link href="/notes/new" className="card flex items-center gap-4 p-5 hover:border-brand-200">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><Sparkles size={20} aria-hidden /></span>
+            <div>
+              <div className="font-semibold">Share your first study guide</div>
+              <div className="text-sm text-black/55">Explanations, worked examples and exam tips in your own words. You earn every time the tutor uses it.</div>
+            </div>
+          </Link>
+        ) : (
+          <ul className="card divide-y divide-black/5">
+            {(notes ?? []).map((n) => (
+              <li key={n.id}>
+                <Link href={`/notes/${n.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-black/[0.02]">
+                  <div className="min-w-0">
+                    <div className={`truncate font-medium ${n.deleted_at ? "text-black/35 line-through" : ""}`}>{n.title}</div>
+                    <div className="text-xs text-black/50">
+                      {n.course} · {uses.get(n.id) ?? 0} {uses.get(n.id) === 1 ? "use" : "uses"}
+                      {n.deleted_at && " · deleted"}
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-semibold text-emerald-700">{usd(toUsd(earned.get(n.id) ?? 0n))}</span>
+                </Link>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <details className="rounded border bg-white p-3 text-sm text-slate-600">
-        <summary className="cursor-pointer">Details</summary>
-        <p className="mt-2">
-          Your money is held in a Circle wallet on the Arc test network:{" "}
-          <a className="font-mono underline" href={`${EXPLORER}/address/${user.walletAddress}`} target="_blank">{user.walletAddress}</a>
-        </p>
-        <p className="mt-1">
-          Testnet only: get free test USDC for that address at{" "}
-          <a className="underline" href="https://faucet.circle.com" target="_blank">faucet.circle.com</a> (choose Arc Testnet), then use “Add money”.
-        </p>
-      </details>
+      <Link href="/study" className="card flex items-center gap-4 p-5 hover:border-brand-200">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700"><BookOpen size={20} aria-hidden /></span>
+        <div>
+          <div className="font-semibold">Study mode</div>
+          <div className="text-sm text-black/55">Practice quizzes and flashcards built from your classmates' study guides.</div>
+        </div>
+      </Link>
     </div>
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+function QuickAction({ href, icon: Icon, label }: { href: string; icon: typeof MessageCircle; label: string }) {
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="text-sm text-slate-500">{label}</div>
-      <div className="text-3xl font-semibold">{value}</div>
-      <div className="text-xs text-slate-400">{hint}</div>
-    </div>
+    <Link href={href} className="card flex flex-col items-center gap-2 p-4 text-center text-sm font-semibold transition hover:border-brand-200">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700"><Icon size={20} aria-hidden /></span>
+      {label}
+    </Link>
   );
 }

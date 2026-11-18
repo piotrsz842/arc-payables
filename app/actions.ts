@@ -13,9 +13,9 @@ export async function topUpAction(formData: FormData) {
     await topUp(db, user, amount);
   } catch (err) {
     console.error("Top-up failed:", err);
-    redirect(err instanceof NotEnoughFundsError ? "/?topup=nofunds" : "/?topup=failed");
+    redirect(err instanceof NotEnoughFundsError ? "/earnings?topup=nofunds" : "/earnings?topup=failed");
   }
-  redirect(`/?topup=ok`);
+  redirect("/earnings?topup=ok");
 }
 
 export async function cashOutAction(formData: FormData) {
@@ -32,5 +32,5 @@ export async function cashOutAction(formData: FormData) {
     const message = err instanceof CashOutError ? err.message : "That didn't work. Your balance was not changed.";
     outcome = `cashout_error=${encodeURIComponent(message)}`;
   }
-  redirect(`/?${outcome}`);
+  redirect(`/earnings?${outcome}`);
 }

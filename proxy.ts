@@ -4,7 +4,7 @@
  *
  * Job 1: keep the login session fresh (Supabase login tokens expire, and only
  *        here can we write the refreshed cookie back to the browser).
- * Job 2: send anyone who isn't logged in to /login.
+ * Job 2: send anyone who isn't logged in to /login (except the landing page).
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -35,7 +35,9 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const loggedIn = !!data?.claims?.sub;
 
-  const publicPage = ["/login", "/signup"].some((p) => request.nextUrl.pathname.startsWith(p));
+  // The landing page ("/" when logged out), login and signup are public.
+  const path = request.nextUrl.pathname;
+  const publicPage = path === "/" || ["/login", "/signup"].some((p) => path.startsWith(p));
   if (!loggedIn && !publicPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
