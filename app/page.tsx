@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EXPLORER } from "@/lib/arc";
 import { requireUser } from "@/lib/auth";
+import { authorRatings } from "@/lib/integrity";
 import { toMicro, toUsd, totalsFor } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
 import { cashableOf, DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
@@ -38,6 +39,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const { topup, cashout, cashout_error } = await searchParams;
   const totals = await totalsFor(db, user.id);
   const payouts = await listPayouts(db, user.id);
+  const myRating = (await authorRatings(db)).get(user.id);
 
   // Earnings per note: sales rows → snippet → note.
   const { data: notes } = await db.from("notes").select("id, course, title, created_at").eq("author_id", user.id).order("created_at");
@@ -79,6 +81,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Your study guides</h2>
+        {myRating && (
+          <p className="text-sm text-slate-600">
+            Students rated answers that used your study guides: 👍 {myRating.up} · 👎 {myRating.down}
+          </p>
+        )}
         {(notes ?? []).length === 0 && <p className="text-sm text-slate-500">No study guides yet. Upload one in your own words (explanations, worked examples, practice problems, exam tips) to start earning.</p>}
         <ul className="divide-y rounded border bg-white">
           {(notes ?? []).map((n) => (

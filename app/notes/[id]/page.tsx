@@ -25,7 +25,7 @@ export default async function NotePage({
 
   const { data: snippets } = await db
     .from("snippets")
-    .select("id, position, title, summary, price_usd")
+    .select("id, position, title, summary, price_usd, flagged_at")
     .eq("note_id", id)
     .order("position");
   const ids = (snippets ?? []).map((s) => s.id);
@@ -44,7 +44,7 @@ export default async function NotePage({
     <div className="mx-auto max-w-3xl space-y-6">
       {uploaded && (
         <p className="rounded bg-green-50 p-3 text-sm text-green-800">
-          Uploaded! Your study guide was split into {snippets?.length ?? 0} sections. The tutor can now find them.
+          Uploaded! Your study guide was split into {snippets?.length ?? 0} {snippets?.length === 1 ? "section" : "sections"}. The tutor can now find them.
         </p>
       )}
       <div>
@@ -63,7 +63,10 @@ export default async function NotePage({
           {(snippets ?? []).map((s) => (
             <li key={s.id} className="flex justify-between gap-4 p-3 text-sm">
               <div>
-                <p className="font-medium">{s.title}</p>
+                <p className="font-medium">
+                  {s.title}
+                  {s.flagged_at && <span className="ml-2 rounded bg-amber-100 px-1 text-xs text-amber-900">off sale: reported, under review</span>}
+                </p>
                 <p className="text-slate-500">{s.summary}</p>
               </div>
               <div className="shrink-0 text-right">

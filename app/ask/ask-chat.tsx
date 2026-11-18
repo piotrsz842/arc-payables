@@ -174,6 +174,9 @@ export function AskChat({ placeholder }: { placeholder: string }) {
                     <span className={s.result?.bought ? "font-medium text-green-700" : "text-slate-400"}>{usd(s.priceUsd)}</span>
                   </div>
                   <p className="text-slate-500">Tutor: {s.reason}</p>
+                  {s.result?.bought && (
+                    <Link href={`/report/${s.snippetId}`} className="text-xs text-slate-400 underline">Report this section</Link>
+                  )}
                   {!s.result && !s.approval && <p className="text-slate-400">Checking this purchase…</p>}
                   {s.result && !s.result.bought && <p className="text-red-700">Not bought: {s.result.why}</p>}
                   {s.approval?.state === "waiting" || s.approval?.state === "sending" ? (
@@ -223,8 +226,26 @@ export function AskChat({ placeholder }: { placeholder: string }) {
               <Link href={`/ask/${done.runId}`} className="underline">Receipt</Link>
             </p>
           )}
+          {done && <RateAnswer runId={done.runId} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Thumbs up / down for this answer. It counts toward the authors whose sections were used. */
+function RateAnswer({ runId }: { runId: string }) {
+  const [sent, setSent] = useState<1 | -1 | null>(null);
+  async function rate(rating: 1 | -1) {
+    const res = await fetch("/api/ratings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runId, rating }) });
+    if (res.ok) setSent(rating);
+  }
+  if (sent) return <p className="text-sm text-slate-500">Thanks for rating this answer.</p>;
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-slate-600">Was this answer helpful?</span>
+      <button onClick={() => rate(1)} className="rounded border px-3 py-1" aria-label="Helpful">👍</button>
+      <button onClick={() => rate(-1)} className="rounded border px-3 py-1" aria-label="Not helpful">👎</button>
     </div>
   );
 }

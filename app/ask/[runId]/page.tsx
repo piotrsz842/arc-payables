@@ -33,6 +33,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
           <p key={d.id}>
             ✓ <span className="font-medium">{d.title}</span> by {d.authorName ?? "a student"} · {cents(d.price_usd)}
             <span className="block pl-4 text-slate-500">Why: {d.agent_reason}</span>
+            <Link href={`/report/${d.snippet_id}`} className="block pl-4 text-xs text-slate-400 underline">Report this section</Link>
           </p>
         ))}
 
