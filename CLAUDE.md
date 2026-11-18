@@ -92,7 +92,14 @@ After Part A: full flow end to end, commit, push, deploy, and **tell the user it
 6. README "Content quality and integrity" section covering all of this; "what's next": professor opt-in per course (instructor approves, can take a revenue share).
 Then commit, push, deploy, and continue straight into Part B (same time-box/revert rules). **If pgvector gets built: near-duplicate check on upload against existing snippets and past tutor answers.**
 **Don't delete test accounts yet**; the user says when their notes are written and we clear + seed together.
-DB: `supabase/migrations/004_integrity.sql` (notes.own_work_confirmed, snippets.flagged_at, snippet_reports, answer_ratings); the user runs it in the SQL Editor.
+DB: `supabase/migrations/004_integrity.sql` (notes.own_work_confirmed, snippets.flagged_at, snippet_reports, answer_ratings); the user ran it 2026-11-18 ✅.
+**Integrity batch DONE 2026-11-18 (deployed 9b2719a):**
+- Wording "study guides in your own words" across pages (code names unchanged; app name stays "Notes by Students"). Upload: required own-work checkbox, re-checked server-side (`own_work` → `notes.own_work_confirmed`); seed-notes sets it true.
+- Checker: relevance schema adds `course_specific` + `value_explanation`; rule order … relevance no → block `relevance`; unsure → ask_human; **course_specific no → block `generic`** ("Generic: the tutor could answer this on its own. …"); then approval threshold. Prompt leans "yes" when unclear. Preview writer (`describeChunks`) now mentions worked examples / exam tips / course notation. demo-3 rewritten as a course-specific worked example (re-seeded); demo-1 (bare Big-O table) now blocks as `generic`. test-checker: +2 live cases (generic → block, worked example → allow), all pass 3× in a row. stage2-demo: allow, generic, relevance, duplicate, manipulation, approval, loop ×2.
+- Reports (`lib/integrity.ts`, `/report/[snippetId]`, `npm run reports [-- uphold|dismiss <id>]`): one report sets `snippets.flagged_at`; `searchPreviews`/`getPreview`/`getSnippetWithContent` skip flagged → tutor can't buy, x402 endpoint 404 before price. Verified: flagged demo-1 vanished from search + 404; dismiss → back (402). Report links in live chat (bought items) and receipt.
+- Ratings: `POST /api/ratings` (asker only, finished run) → `answer_ratings`; `authorRatings()` (looks up authors separately: purchase_decisions.snippet_id has NO FK to snippets, so PostgREST embeds don't work); dashboard "👍 n · 👎 m"; search tie-breaker. Verified Demo Notes 👍1.
+- README: "Content quality and integrity" + "What's next" (professor opt-in per course with revenue share, platform fee, direct payouts, reputation).
+- More test data: Test Author Two notes "Heaps (TEST note 2)", "Stacks (TEST note 3)".
 
 Part B, extras, in order, each time-boxed 2 h:
 6. pgvector search on snippets, filtered by course first, combined with the keyword search.
