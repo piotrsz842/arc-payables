@@ -31,7 +31,35 @@ Paying students for their work only makes sense if what we sell is **their own w
    A person reviews the report (`npm run reports`, a stand-in for a moderator screen). Upholding it keeps the section off sale; dismissing the last open report puts it back. The author sees "off sale: reported, under review" on their note page.
 4. **The checker pays only for course-specific value.** Before every purchase, the separate checker call also asks: *does this section add course-specific information the tutor couldn't give on its own?* (a worked example, practice problems, exam tips, the course's notation or emphasis). Generic or recycled content, like a bare Big-O table any textbook has, is **blocked** with the reason shown: *"Generic: the tutor could answer this on its own."* The previews the checker judges are written to mention course-specific material when a section has it.
 
+**Authors can delete their own study guides** (with a confirm step). Deleting is a *soft* delete that reuses the reports' remove-from-sale flag: the guide disappears from search, previews, the tutor and the x402 endpoint at once. Its rows stay, so past sales, earnings and cash-out history remain intact, and earnings already made can still be cashed out. **Content an AI agent already bought can't be taken back**, but it can't be sold again.
+
 **Ratings.** After each answer the student can give a thumbs up or down. Ratings count toward the authors whose sections that answer used, appear on each author's dashboard, and break ties in search. Relevance always comes first.
+
+## Agent identity and reputation (ERC-8004 on Arc)
+
+The tutor is a registered **ERC-8004 agent on Arc testnet: agent #897944**.
+- **Identity:** our platform wallet registered it in Arc's IdentityRegistry (`0x8004A818BFB912233c491871b3d84c89A494BD9e`). Its metadata URI is [`/agent.json`](https://arc-payables-chi.vercel.app/agent.json): name, the wallet it pays from, its x402 endpoints, and its spending rules.
+- **Reputation:** after every question, the **checker's own Circle wallet** records feedback in the ReputationRegistry (`0x8004B663056A597Dffe9eCcC1965A193B7388713`). The score is the share of the tutor's purchase proposals that passed the checker (0–100, tag `purchase_discipline`, with a comment like "2 of 3 purchase proposals passed").
+  - ERC-8004 doesn't let an agent's owner rate its own agent, so the checker signs with a separate wallet.
+  - It's sent in the background, so the student never waits.
+- *Honest limit:* both wallets belong to the platform today. In production, reputation should come from independent raters, such as students or outside validators.
+
+## Independent confirmation of cash-outs (QuickNode Streams)
+
+Every cash-out puts its payout ID on chain through Arc's Memo contract. A **QuickNode Stream** watches the chain and tells us when that memo appears, independent of our own code. The cash-out then shows **"✓ confirmed on chain"**.
+
+| Setting | Value |
+|---|---|
+| Network | **Arc Testnet** |
+| Dataset | **Logs** (event logs of every block) |
+| Filter | Keep only logs where `address` = Memo contract `0x5294E9927c3306DcBaDb03fe70b92e01cCede505`, `topics[0]` = the `Memo(address,address,bytes32,bytes32,bytes,uint256)` event (`0xeb15ee72…a5e4`), and `topics[1]` (the sender) = our platform wallet. The filter code is in [`docs/quicknode-filter.js`](docs/quicknode-filter.js). |
+| Destination | **Webhook** `POST https://arc-payables-chi.vercel.app/api/streams/quicknode`, payload compression off |
+| Security | Each request is signed: `X-QN-Signature` = HMAC-SHA256(nonce + timestamp + body) with the stream's security token. We reject bad signatures (401) and messages older than 10 minutes. |
+| What we do | Decode the Memo event, read the payout ID, find that cash-out in our ledger, and stamp it "confirmed on chain" (by QuickNode, with tx hash and block). |
+
+**Why:** our app already reads its own transactions back from Arc. A stream is a *second, independent* witness: if our server crashes mid-cash-out, or someone claims a payout never happened, the confirmation comes from the chain via a third party. The same stream could later drive author notifications or accounting exports. Test without QuickNode: `npm run test-stream-webhook -- <cash-out tx hash>` builds a real Logs payload and signs it.
+
+*Cost note:* Arc makes a block about every 0.5 s and Streams bills per block (20 credits on the Logs dataset, filters don't reduce it). That's about 3.5M credits a day, so on the free plan we run the stream during demos.
 
 ## Cost at scale
 

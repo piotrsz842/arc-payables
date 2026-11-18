@@ -34,15 +34,15 @@ const STATUS_WORDS: Record<PayoutDetail["status"], string> = {
   failed: "failed, money returned",
 };
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ topup?: string; cashout?: string; cashout_error?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ topup?: string; cashout?: string; cashout_error?: string; deleted?: string }> }) {
   const user = await requireUser();
-  const { topup, cashout, cashout_error } = await searchParams;
+  const { topup, cashout, cashout_error, deleted } = await searchParams;
   const totals = await totalsFor(db, user.id);
   const payouts = await listPayouts(db, user.id);
   const myRating = (await authorRatings(db)).get(user.id);
 
   // Earnings per note: sales rows → snippet → note.
-  const { data: notes } = await db.from("notes").select("id, course, title, created_at").eq("author_id", user.id).order("created_at");
+  const { data: notes } = await db.from("notes").select("id, course, title, created_at, deleted_at").eq("author_id", user.id).order("created_at");
   const { data: snippets } = await db.from("snippets").select("id, note_id, title").eq("author_id", user.id);
   const { data: sales } = await db
     .from("ledger_entries")
@@ -65,6 +65,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Hi {user.displayName}</h1>
       {topup && <p className="rounded bg-slate-100 p-3 text-sm">{TOPUP_MESSAGES[topup]}</p>}
+      {deleted && <p className="rounded bg-slate-100 p-3 text-sm">Study guide deleted. It is no longer sold; what it earned stays in your balance.</p>}
       {cashout && <p className="rounded bg-green-50 p-3 text-sm text-green-800">{CASHOUT_MESSAGES[cashout]}</p>}
       {cashout_error && <p className="rounded bg-red-50 p-3 text-sm text-red-800">{cashout_error}</p>}
 
@@ -90,9 +91,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         <ul className="divide-y rounded border bg-white">
           {(notes ?? []).map((n) => (
             <li key={n.id} className="flex justify-between p-3 text-sm">
-              <Link href={`/notes/${n.id}`} className="hover:underline"><span className="font-medium">{n.course}</span> · {n.title}</Link>
+              <Link href={`/notes/${n.id}`} className={`hover:underline ${n.deleted_at ? "text-slate-400 line-through" : ""}`}><span className="font-medium">{n.course}</span> · {n.title}</Link>
               <span>
                 {soldByNote.get(n.id) ?? 0} {soldByNote.get(n.id) === 1 ? "use" : "uses"} · earned {money(earnedByNote.get(n.id) ?? 0n)}
+                {n.deleted_at ? (
+                  <span className="ml-2 text-slate-400">deleted</span>
+                ) : (
+                  <Link href={`/notes/${n.id}/delete`} className="ml-3 text-xs text-red-700 underline">Delete</Link>
+                )}
               </span>
             </li>
           ))}
@@ -155,7 +161,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
               <li key={p.id} className="p-3">
                 <div className="flex justify-between">
                   <span>{new Date(p.createdAt).toLocaleDateString()} · ${Number(p.amountUsd).toFixed(3)} to {DESTINATIONS[p.detail.destination].label}</span>
-                  <span>{STATUS_WORDS[p.detail.status]}</span>
+                  <span>
+                    {STATUS_WORDS[p.detail.status]}
+                    {p.detail.onchain && <span className="ml-2 text-xs text-green-700">✓ confirmed on chain</span>}
+                  </span>
                 </div>
                 <details className="mt-1 text-xs text-slate-500">
                   <summary className="cursor-pointer">details</summary>
@@ -173,6 +182,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                       {s.name}: <a className="underline" href={s.url} target="_blank">view</a>
                     </p>
                   ))}
+                  {p.detail.onchain && <p>Confirmed on chain by an independent {p.detail.onchain.by} watching Arc ({new Date(p.detail.onchain.at).toLocaleString()})</p>}
                   {p.detail.error && <p>Problem: {p.detail.error}</p>}
                 </details>
               </li>

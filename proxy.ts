@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest) {
 // /api/snippets is protected by PAYMENT (x402), not by login: the buyer is
 // an AI agent with no login cookie, and a redirect would break the 402 flow.
 // /agent.json is the tutor's public ERC-8004 metadata.
+// /api/streams is QuickNode's webhook (protected by its HMAC signature, not a login).
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/snippets|agent\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/snippets|api/streams|agent\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

@@ -53,8 +53,31 @@ export async function reviewReport(db: SupabaseClient, reportId: number, outcome
       .select("id", { count: "exact", head: true })
       .eq("snippet_id", report.snippet_id)
       .neq("status", "dismissed");
-    if (!count) await db.from("snippets").update({ flagged_at: null }).eq("id", report.snippet_id);
+    // Back on sale only if nothing else keeps it off (another report, or the author deleted the guide).
+    const { data: s } = await db.from("snippets").select("notes(deleted_at)").eq("id", report.snippet_id).single();
+    const deleted = (s?.notes as unknown as { deleted_at: string | null } | null)?.deleted_at;
+    if (!count && !deleted) await db.from("snippets").update({ flagged_at: null }).eq("id", report.snippet_id);
   }
+}
+
+/**
+ * The author deletes their own study guide. SOFT delete: it's taken off sale
+ * with the same flag reports use (search, the tutor and the x402 endpoint all
+ * skip it), but rows stay, so past sales, earnings and cash-outs are intact.
+ * Content an agent already bought can't be taken back; it just can't be sold again.
+ */
+export async function deleteStudyGuide(db: SupabaseClient, authorId: string, noteId: string): Promise<boolean> {
+  const now = new Date().toISOString();
+  const { data } = await db
+    .from("notes")
+    .update({ deleted_at: now })
+    .eq("id", noteId)
+    .eq("author_id", authorId) // only your own
+    .is("deleted_at", null)
+    .select("id");
+  if (!data?.length) return false;
+  await db.from("snippets").update({ flagged_at: now }).eq("note_id", noteId).is("flagged_at", null);
+  return true;
 }
 
 /** Save the asker's thumbs up (1) or down (-1) for their answer. */

@@ -60,6 +60,7 @@ export type PayoutDetail = {
   feesUsd?: string; // estimated transfer fees
   error?: string;
   reversalOf?: number; // set on a reversal row
+  onchain?: { by: string; txHash?: string; block?: string; at: string }; // independent confirmation (QuickNode Stream webhook)
 };
 
 export class CashOutError extends Error {}

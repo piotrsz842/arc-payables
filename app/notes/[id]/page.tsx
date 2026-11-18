@@ -20,7 +20,7 @@ export default async function NotePage({
   const { id } = await params;
   const { uploaded } = await searchParams;
 
-  const { data: note } = await db.from("notes").select("id, author_id, course, title, created_at").eq("id", id).single();
+  const { data: note } = await db.from("notes").select("id, author_id, course, title, created_at, deleted_at").eq("id", id).single();
   if (!note || note.author_id !== user.id) notFound(); // only the author sees this page
 
   const { data: snippets } = await db
@@ -51,6 +51,9 @@ export default async function NotePage({
         <p className="text-sm text-slate-500">{note.course}</p>
         <h1 className="text-2xl font-bold">{note.title}</h1>
         <p className="text-sm text-slate-600">Earned so far: {money(total)}</p>
+        {note.deleted_at && (
+          <p className="mt-2 rounded bg-slate-100 p-2 text-sm">You deleted this study guide. It is no longer sold; what it earned stays yours.</p>
+        )}
       </div>
 
       <section className="space-y-2">
@@ -65,7 +68,7 @@ export default async function NotePage({
               <div>
                 <p className="font-medium">
                   {s.title}
-                  {s.flagged_at && <span className="ml-2 rounded bg-amber-100 px-1 text-xs text-amber-900">off sale: reported, under review</span>}
+                  {s.flagged_at && !note.deleted_at && <span className="ml-2 rounded bg-amber-100 px-1 text-xs text-amber-900">off sale: reported, under review</span>}
                 </p>
                 <p className="text-slate-500">{s.summary}</p>
               </div>
@@ -80,7 +83,10 @@ export default async function NotePage({
         </ul>
       </section>
 
-      <Link href="/" className="inline-block text-sm underline">Back to your dashboard</Link>
+      <div className="flex gap-4 text-sm">
+        <Link href="/" className="underline">Back to your dashboard</Link>
+        {!note.deleted_at && <Link href={`/notes/${note.id}/delete`} className="text-red-700 underline">Delete this study guide</Link>}
+      </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@
     "embed-backfill": "tsx --env-file=.env scripts/embed-backfill.ts",
     "tune-duplicates": "tsx --conditions=react-server --env-file=.env scripts/tune-duplicates.ts",
     "erc8004": "tsx --conditions=react-server --env-file=.env scripts/erc8004.ts",
+    "test-stream-webhook": "tsx --env-file=.env scripts/test-stream-webhook.ts",
     "reports": "tsx --env-file=.env scripts/reports.ts",
     "payout": "tsx --conditions=react-server --env-file=.env scripts/payout.ts",
     "bridge-estimate": "tsx --env-file=.env scripts/bridge-estimate.ts",
