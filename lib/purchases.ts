@@ -13,9 +13,10 @@
  */
 import type { GatewayClient } from "@circle-fin/x402-batching/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { checkPurchase, type Decision } from "./checker";
+import { checkPurchase, type Decision, type QuestionJudge } from "./checker";
 import { toMicro, toUsd } from "./ledger";
 import type { SnippetPreview } from "./snippets";
+import type { UsageMeter } from "./usage";
 
 export type Run = { id: string; question: string; budget_usd: number };
 
@@ -80,6 +81,8 @@ export async function proposePurchase(opts: {
   preview: SnippetPreview;
   reason: string;
   askHuman: AskHuman;
+  meter?: UsageMeter;
+  judge?: QuestionJudge; // shared per question: one judge call covers all candidates
 }): Promise<Outcome> {
   const { db, agent, run, preview, reason } = opts;
 
@@ -121,6 +124,7 @@ export async function proposePurchase(opts: {
           .filter((r) => r.verdict === "block" || (r.verdict === "ask_human" && r.human_decision !== "approved"))
           .map((r) => r.snippet_id),
       },
+      { judge: opts.judge, meter: opts.meter },
     );
 
     // 3. Log the decision BEFORE any money moves.

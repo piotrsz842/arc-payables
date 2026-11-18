@@ -33,6 +33,24 @@ Paying students for their work only makes sense if what we sell is **their own w
 
 **Ratings.** After each answer the student can give a thumbs up or down. Ratings count toward the authors whose sections that answer used, appear on each author's dashboard, and break ties in search. Relevance always comes first.
 
+## Cost at scale
+
+Every question has two costs: the **notes** (fractions of a cent, paid to students over x402) and the **AI model calls** (paid by the platform). Measured on one typical question (search → buy one section → answer):
+
+| Setup | Model calls | AI cost per question |
+|---|---|---|
+| Tutor Opus 5.5, checker Opus 5.5 (first version) | 4 | $0.041 |
+| **Tutor Opus 5.5, checker Haiku 5.5 (current)** | 4 | **$0.026** |
+| Tutor and checker on Haiku 5.5 (measured for comparison) | 4 | $0.001 |
+
+How we keep it down:
+- **Rules before AI.** Loop, duplicate, price cap, budget and balance checks are plain code and run first; reported or deleted sections can't even be found. When a rule decides, no model is called.
+- **One checker call per question.** The checker (Claude Haiku 5.5) judges *all* candidate sections the tutor found, relevance and course-specific value together, in one call. It's reused for every purchase in that question. It sees only the question and the free previews, which also makes it harder to manipulate.
+- **Prompt caching** on the tutor's tool loop: each step re-reads the same instructions and history from cache at a fraction of the price.
+- **Capped outputs:** tutor 4,000 tokens per step, checker about 150 per candidate, upload previews about 200 per section.
+
+**Who pays:** the platform's fee per purchase (see What's next) covers model cost. At $0.026 per question, a fee of a few cents per question covers it on Opus. On Haiku it would be a tenth of a cent. Test runs mock the AI (`npm run test-checker` uses a fake judge); real-model checks are opt-in (`-- --live`).
+
 ## What's next
 - **Professor opt-in per course:** an instructor approves their course on the platform, can request removals directly, and can take a revenue share. This turns "students selling notes" into a course-sanctioned resource.
 - **Platform fee:** a small cut per purchase to cover the cost of running the AI tutor and checker.

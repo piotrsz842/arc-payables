@@ -81,8 +81,8 @@ export async function describeChunks(course: string, noteTitle: string, chunks: 
   client ??= new Anthropic();
   const numbered = chunks.map((c, i) => `### Section ${i}\n${c}`).join("\n\n");
   const response = await client.beta.messages.parse({
-    model: "claude-opus-5-5",
-    max_tokens: 16000,
+    model: "claude-opus-5-5", // previews decide what the checker sees, so they get the stronger model (once per upload)
+    max_tokens: 1000 + 200 * chunks.length, // ~100 tokens per preview plus a little thinking
     output_config: { effort: "low", format: betaZodOutputFormat(PreviewsSchema) },
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",

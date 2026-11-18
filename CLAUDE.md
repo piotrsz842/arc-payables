@@ -101,6 +101,19 @@ DB: `supabase/migrations/004_integrity.sql` (notes.own_work_confirmed, snippets.
 - README: "Content quality and integrity" + "What's next" (professor opt-in per course with revenue share, platform fee, direct payouts, reputation).
 - More test data: Test Author Two notes "Heaps (TEST note 2)", "Stacks (TEST note 3)".
 
+**Rest-of-Wednesday plan (from the user, 2026-11-18 afternoon; freeze 11 PM CST):**
+1. Cost pass (user's Anthropic balance ~$4): report models + measured cost per question; checker → Haiku 5.5; tutor stays Opus unless Haiku is good enough (show side-by-side first); rules before AI; one combined relevance+generic checker call per question for all candidates; cap outputs, trim inputs; README "Cost at scale". **RULE from now on: mock AI responses in automated tests where possible, and ASK the user before any bulk test against the real API.**
+2. Finish pgvector: embed-backfill, tune the two near-duplicate thresholds against real examples, test search + duplicate check, full flow, commit/push/deploy.
+3. Authors can delete their own study guides: Delete button + confirm; SOFT delete reusing the remove-from-sale mechanism (gone from search/previews/tutor/x402; rows kept so sales, earnings, cash-out history stay; earnings still cashable). README: bought content can't be taken back, but can't be sold again.
+4. ERC-8004 agent identity for the tutor (2 h box, revert rules). 5. QuickNode Stream on cash-outs → webhook "confirmed onchain" (2 h box; give exact Stream settings; README documents network/dataset/filter/destination/why).
+**If it's past 9 PM before ERC-8004 or QuickNode starts, skip it and list under "What's next".** Don't delete test accounts yet. Migrations 004 + 005 applied ✅ (checked 2026-11-18).
+
+**Cost pass DONE 2026-11-18** (`lib/usage.ts` UsageMeter + prices; `[cost]` line logged per question):
+- Measured, same question (search → buy 1 → answer): A all-Opus $0.0408 (tutor 3 steps $0.034: in ~1.1–1.9k, out 87/164/539; checker Opus in 1182 out 119 $0.0071) → **B current: Opus tutor + Haiku batched checker + prompt caching $0.0257** → C Haiku tutor $0.0010. Side-by-side answers: `docs/tutor-model-comparison.md`. **Tutor stays Opus until the user decides.** (`TUTOR_MODEL` env var exists only for comparisons.)
+- Checker: `QuestionJudge` (one per question, created in askTutor; search results are `remember`ed) → `judgeCandidates()` ONE Haiku 5.5 call for all unjudged candidates (max 12), thinking disabled, effort low, max_tokens 400+150/candidate, keys c1..cn mapped back to ids. **The judge sees only the question + previews (no agent reason, no price/budget)**; rules (loop/duplicate/caps/budget/balance) run first and skip the AI; flagged sections are never found. Haiku has no server-side fallback → no `fallbacks` on Haiku calls. `checkPurchase(id, input, history, { judge?, meter? })`, default judge = single-candidate QuestionJudge (stage2-demo path).
+- Tutor: max_tokens 4000, top-level `cache_control: {type: "ephemeral"}` (automatic caching; verified cache reads), fallbacks only for Opus. Upload previews (`describeChunks`) stay Opus, max_tokens 1000+200/section.
+- test-checker: 12 offline tests with a FAKE judge (rules call AI 0 times; answer→verdict mapping; outage fails safe); `-- --live` = one batched Haiku call over 5 cases ($0.0004), all pass. stage2-demo: same 8 verdicts.
+
 Part B, extras, in order, each time-boxed 2 h:
 6. pgvector search on snippets, filtered by course first, combined with the keyword search.
 7. ERC-8004 agent identity on Arc testnet for the tutor (Arc tutorial); record allowed/blocked purchases toward its reputation if feasible.
