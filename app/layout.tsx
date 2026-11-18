@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Notes by Students",
-  description: "Students get paid when an AI tutor uses their notes",
+  description: "Students get paid when an AI tutor uses their study guides",
 };
 
 // The frame around every page: header (with who's logged in) + page content.

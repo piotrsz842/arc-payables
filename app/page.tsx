@@ -68,18 +68,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Your balance" value={money(totals.balance)} hint="Spend it on questions; cash out what you earned" />
-        <Stat label="Earned from your notes" value={money(totals.earnings)} hint="Every time the tutor uses them" />
+        <Stat label="Earned from your study guides" value={money(totals.earnings)} hint="Every time the tutor uses them" />
         <Stat label="Free questions left" value={String(user.freeQuestionsLeft)} hint="Then questions use your balance" />
       </div>
 
       <div className="flex flex-wrap gap-3">
         <Link href="/ask" className="rounded bg-slate-900 px-4 py-2 font-medium text-white">Ask the tutor</Link>
-        <Link href="/notes/new" className="rounded border px-4 py-2 font-medium">Upload notes</Link>
+        <Link href="/notes/new" className="rounded border px-4 py-2 font-medium">Upload a study guide</Link>
       </div>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Your notes</h2>
-        {(notes ?? []).length === 0 && <p className="text-sm text-slate-500">No notes yet. Upload a study guide to start earning.</p>}
+        <h2 className="text-lg font-semibold">Your study guides</h2>
+        {(notes ?? []).length === 0 && <p className="text-sm text-slate-500">No study guides yet. Upload one in your own words (explanations, worked examples, practice problems, exam tips) to start earning.</p>}
         <ul className="divide-y rounded border bg-white">
           {(notes ?? []).map((n) => (
             <li key={n.id} className="flex justify-between p-3 text-sm">
@@ -121,7 +121,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Cash out</h2>
         <p className="text-sm text-slate-600">
-          You can cash out what your notes earned: <span className="font-medium">{money(cashableOf(totals))}</span> right now.
+          You can cash out what your study guides earned: <span className="font-medium">{money(cashableOf(totals))}</span> right now.
           Money you added is for asking questions.
         </p>
         {/* Goes to a confirm screen that shows fees and the amount that arrives. */}

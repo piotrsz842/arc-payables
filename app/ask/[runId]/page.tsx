@@ -27,7 +27,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
       </div>
 
       <section className="space-y-2 text-sm">
-        <h2 className="font-semibold">Notes used</h2>
+        <h2 className="font-semibold">Study guides used</h2>
         {used.length === 0 && <p className="text-slate-500">None.</p>}
         {used.map((d) => (
           <p key={d.id}>
@@ -53,7 +53,7 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
         ))}
 
         <p className="pt-2 font-medium">
-          {run.free_question ? `Free question (notes worth ${cents(run.spent_usd)} covered by us)` : `This question cost ${cents(run.charged_usd)}`}
+          {run.free_question ? `Free question (study guides worth ${cents(run.spent_usd)} covered by us)` : `This question cost ${cents(run.charged_usd)}`}
         </p>
       </section>
 

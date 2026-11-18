@@ -146,7 +146,7 @@ export function AskChat({ placeholder }: { placeholder: string }) {
       {error === "topup" && (
         <p className="rounded bg-red-50 p-3 text-sm text-red-700">
           You&apos;ve used your free questions and your balance is empty.{" "}
-          <Link href="/" className="underline">Add money</Link> or upload notes to earn some.
+          <Link href="/" className="underline">Add money</Link> or upload a study guide to earn some.
         </p>
       )}
       {error === "failed" && <p className="rounded bg-red-50 p-3 text-sm text-red-700">Something went wrong. Please try again.</p>}
@@ -217,7 +217,7 @@ export function AskChat({ placeholder }: { placeholder: string }) {
           {done && (
             <p className="text-sm">
               {done.free
-                ? `Free question. Notes worth ${usd(done.spentUsd)} were covered by us.`
+                ? `Free question. Study guides worth ${usd(done.spentUsd)} were covered by us.`
                 : `This question cost ${usd(done.chargedUsd)}, paid from your balance.`}{" "}
               Every cent went to the students whose notes were used.{" "}
               <Link href={`/ask/${done.runId}`} className="underline">Receipt</Link>

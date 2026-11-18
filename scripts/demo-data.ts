@@ -36,12 +36,15 @@ export const DEMO_SNIPPETS: DemoSnippet[] = [
     id: "demo-3",
     title: "Quicksort pivot choice and the worst case",
     course: "CPSC 221",
-    summary: "Why a bad pivot makes quicksort quadratic, and how median-of-three or random pivots avoid it.",
+    summary:
+      "A worked example tracing CPSC 221's first-element-pivot quicksort on the sorted array [1..5], showing the n + (n-1) + ... sum, plus the quiz tip on median-of-three.",
     priceUsd: "0.001",
     content:
-      "If the pivot is always the smallest or largest element (e.g. first element on sorted input), " +
-      "each partition removes only one element: n + (n-1) + ... = O(n^2). Random or median-of-three " +
-      "pivots make that case vanishingly unlikely.",
+      "Worked example (the way our lecture traces it): quicksort [1,2,3,4,5] with the FIRST element as pivot. " +
+      "Pivot 1: left side empty, right side [2,3,4,5]. Pivot 2: right side [3,4,5]. Each partition removes only " +
+      "one element, so the work is 5 + 4 + 3 + 2 + 1 = n(n+1)/2 = O(n^2). Quiz tip: they ask you to name the fix. " +
+      "Say median-of-three (median of first, middle, last) or a random pivot, and that it makes the worst case " +
+      "vanishingly unlikely but still possible.",
   },
   {
     id: "demo-4",

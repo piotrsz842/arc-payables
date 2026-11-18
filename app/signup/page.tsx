@@ -14,7 +14,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   return (
     <form action={signUp} className="mx-auto max-w-sm space-y-4 rounded-lg border bg-white p-6">
       <h1 className="text-xl font-bold">Create your account</h1>
-      <p className="text-sm text-slate-600">Upload your notes and get paid when the AI tutor uses them. You also get 3 free questions.</p>
+      <p className="text-sm text-slate-600">Upload study guides in your own words and get paid when the AI tutor uses them. You also get 3 free questions.</p>
       {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{ERRORS[error] ?? "Please try again."}</p>}
       <label className="block text-sm">
         Name

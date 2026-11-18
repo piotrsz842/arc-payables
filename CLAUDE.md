@@ -83,6 +83,17 @@ After Part A: full flow end to end, commit, push, deploy, and **tell the user it
 - Full flow 2026-11-18: outside agent bought demo-4 ×33 from the LIVE site → Demo Notes earned $0.264; batch settled into platform Gateway (0.023 → 0.299) within ~1 min; quote $0.26 → fees $0.072 → ~$0.188; real Base Sepolia cash-out 21.5 s, memo verified, platform Gateway 0.299 → 0.0355 (= −0.26 −0.0035), **$0.182566 arrived on Base Sepolia** (balanceOf). Browser: new signup (Test Author Two, password TEST_SIGNUP2_PASSWORD) with loading state; free question with approval prompt → approved → "Free question, $0.009 covered"; upload → note page; outside agent bought its sections ×12 (localhost) → dashboard "You can cash out $0.012" → confirm page (fees $0, arrives $0.012) → Confirm → done.
 - Test data to clear before seeding: Ana Author, Test Author Two (+ "Heaps (TEST note 2)"), Demo Notes' many test sales, Sam, abandoned stage2 runs. Outside agent key `OUTSIDE_AGENT_PRIVATE_KEY` (Gateway ~$0.1 left).
 
+**Integrity batch (from the user, 2026-11-18; before Part B; time-box ~2 h):**
+1. Wording (user-facing only, code names unchanged): "notes" → "study guides in your own words" (explanations, worked examples, practice problems, exam tips).
+2. Upload rule: required checkbox "This is my own work in my own words. It doesn't copy slides, handouts, or lecture text word for word, and isn't AI output."
+3. Report button on snippets; reasons include "copies course materials" and "instructor removal request". Flagged snippets stop being sold until reviewed.
+4. Checker criterion: "does this snippet add course-specific information the tutor couldn't answer on its own?" Generic/recycled → blocked with that reason shown. Rerun checker tests + scripted demo; demo must stay predictable.
+5. Ratings: thumbs up/down after each tutor answer, stored per author; rank search with it only if quick.
+6. README "Content quality and integrity" section covering all of this; "what's next": professor opt-in per course (instructor approves, can take a revenue share).
+Then commit, push, deploy, and continue straight into Part B (same time-box/revert rules). **If pgvector gets built: near-duplicate check on upload against existing snippets and past tutor answers.**
+**Don't delete test accounts yet**; the user says when their notes are written and we clear + seed together.
+DB: `supabase/migrations/004_integrity.sql` (notes.own_work_confirmed, snippets.flagged_at, snippet_reports, answer_ratings); the user runs it in the SQL Editor.
+
 Part B, extras, in order, each time-boxed 2 h:
 6. pgvector search on snippets, filtered by course first, combined with the keyword search.
 7. ERC-8004 agent identity on Arc testnet for the tutor (Arc tutorial); record allowed/blocked purchases toward its reputation if feasible.

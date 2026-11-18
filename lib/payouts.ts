@@ -128,7 +128,7 @@ async function checkCashOut(
   if (amount > before.balance) throw new CashOutError("That's more than your balance.");
   const cashable = cashableOf(before);
   if (amount > cashable) {
-    throw new CashOutError(`You can cash out what your notes earned: $${Number(toUsd(cashable)).toFixed(3)} right now. Money you added is for questions.`);
+    throw new CashOutError(`You can cash out what your study guides earned: $${Number(toUsd(cashable)).toFixed(3)} right now. Money you added is for questions.`);
   }
   // Sales reach the platform's Gateway balance in batches, a few minutes later.
   const income = await platformGatewayAvailable();

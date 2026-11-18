@@ -89,7 +89,7 @@ for (const n of notes) {
     console.log(`Skipped "${n.title}" (already there)`);
     continue;
   }
-  const { sections } = await saveNote(db, { authorId, course: n.course, title: n.title, body: n.body, priceUsd: n.price });
+  const { sections } = await saveNote(db, { authorId, course: n.course, title: n.title, body: n.body, priceUsd: n.price, ownWorkConfirmed: true }) // the user wrote these themselves;
   console.log(`Saved "${n.title}" by ${n.author}: ${sections} sections`);
 }
 console.log(`\nDone. Author logins: <name>@example.com, password = DEMO_PASSWORD in .env.`);

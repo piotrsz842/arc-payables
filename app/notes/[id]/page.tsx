@@ -44,7 +44,7 @@ export default async function NotePage({
     <div className="mx-auto max-w-3xl space-y-6">
       {uploaded && (
         <p className="rounded bg-green-50 p-3 text-sm text-green-800">
-          Uploaded! Your notes were split into {snippets?.length ?? 0} sections. The tutor can now find them.
+          Uploaded! Your study guide was split into {snippets?.length ?? 0} sections. The tutor can now find them.
         </p>
       )}
       <div>

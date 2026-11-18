@@ -18,11 +18,13 @@ export async function uploadNote(formData: FormData) {
   if (!body && file instanceof File && file.size > 0) body = (await file.text()).trim();
 
   if (!course || !title || !body) redirect("/notes/new?error=missing");
+  // Required on the form, checked again here: the author confirms it is their own work.
+  if (formData.get("own_work") !== "on") redirect("/notes/new?error=own");
   if (body.length > MAX_CHARS) redirect("/notes/new?error=long");
 
   let noteId: string;
   try {
-    ({ noteId } = await saveNote(db, { authorId: user.id, course, title, body }));
+    ({ noteId } = await saveNote(db, { authorId: user.id, course, title, body, ownWorkConfirmed: true }));
   } catch (err) {
     console.error("Note upload failed:", err);
     redirect("/notes/new?error=failed");

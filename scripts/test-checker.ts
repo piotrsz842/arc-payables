@@ -53,6 +53,32 @@ if (process.env.ANTHROPIC_API_KEY) {
     if (!ok) failures++;
     console.log(`${ok ? "PASS" : "FAIL"}  ${a.name.padEnd(30)} → ${r.verdict} [${r.rule}] ${r.reason}`);
   }
+
+  // Worth paying for? On topic, but generic vs course-specific.
+  const value = [
+    {
+      name: "generic fact list",
+      preview: { title: "Big-O of common sorting algorithms", course: "CPSC 221", summary: "Best, average and worst-case running times of merge sort, quicksort, heapsort and insertion sort." },
+      expect: "block",
+      rule: "generic",
+    },
+    {
+      name: "course-specific worked example",
+      preview: {
+        title: "Quicksort pivot choice and the worst case",
+        course: "CPSC 221",
+        summary: "A worked example tracing CPSC 221's first-element-pivot quicksort on the sorted array [1..5], showing the n + (n-1) + ... sum, plus the quiz tip on median-of-three.",
+      },
+      expect: "allow",
+      rule: "all_checks_passed",
+    },
+  ] as const;
+  for (const v of value) {
+    const r = await checkPurchase("s3", { ...base, preview: v.preview }, fresh);
+    const ok = r.verdict === v.expect && r.rule === v.rule;
+    if (!ok) failures++;
+    console.log(`${ok ? "PASS" : "FAIL"}  ${v.name.padEnd(30)} → ${r.verdict} [${r.rule}] ${r.reason}`);
+  }
 } else {
   const ok = d.verdict === "ask_human" && d.rule === "checker_unavailable";
   if (!ok) failures++;

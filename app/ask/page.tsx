@@ -10,7 +10,7 @@ export default async function AskPage() {
       <div className="rounded-lg border bg-white p-6">
         <h1 className="text-xl font-bold">Ask the tutor</h1>
         <p className="mt-1 text-sm text-slate-600">
-          The tutor looks through notes written by students in your course and pays a fraction of a cent for the ones it uses.
+          The tutor looks through study guides students in your course wrote in their own words, and pays a fraction of a cent for the ones it uses.
           A separate checker reviews every purchase first, and you&apos;ll see each one here as it happens.
           {user.freeQuestionsLeft > 0
             ? ` You have ${user.freeQuestionsLeft} free question${user.freeQuestionsLeft === 1 ? "" : "s"} left.`
