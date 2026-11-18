@@ -57,12 +57,27 @@ Email signup, dollar amounts, plain words ("earnings", "cash out"). No addresses
 - **Outside agent:** a separate script with NO account on our platform that finds a snippet (free `GET /api/snippets`) and buys it over x402 (`/api/snippets/[id]`) like any outside AI agent would. Demo point: why x402 matters (any agent can buy our notes, not just our tutor). The sale still credits the author.
 - Run the full flow end to end on the live site after seeding.
 
-**Wednesday extras, in priority order. Stop after two, and ASK the user before starting each:**
-1. Spendable earnings + free starter questions → **already built in Stage 3** (nothing to do).
-2. pgvector search on snippets, filtered by course first.
-3. ERC-8004 agent identity on Arc for the tutor agent.
-4. QuickNode Stream on Arc testnet watching the platform wallet (only if the user decides to enter that bounty).
-- **FEATURE FREEZE Wednesday night (Nov 18). After that: bug fixes only.**
+- Outside agent: BUILT 2026-11-18 (`scripts/outside-agent.ts`, own key `OUTSIDE_AGENT_PRIVATE_KEY`, imports none of our code). Bought demo-3 from the LIVE site in 1.4 s; author credited.
+
+**Wednesday Nov 18 plan (from the user; replaces the earlier extras list). FEATURE FREEZE 11 PM CST tonight; after that bug fixes only.**
+
+Part A, must-haves, in order:
+1. Close the money loop (Arc wants end-to-end):
+   a. Top-ups auto-deposit into the agent's Gateway balance (no manual script).
+   b. Cash-outs funded by the platform's Gateway income, not faucet money: move Gateway balance → platform wallet before/as part of each cash-out (check Circle's current docs; tell the user if unsupported on Arc testnet).
+2. Checker tuning: on-topic notes allowed without an "unsure" prompt; only the off-topic note blocked; only the premium note asks for approval. Demo flow must be predictable.
+3. Premium note: optional `Price:` field in the seed format so one note costs $0.008 and triggers approval by price.
+4. Cash-out fees: before confirming a Base Sepolia cash-out, show the estimated fee and the amount that will arrive, in dollars. Sensible minimum for cross-chain cash-outs.
+5. Signup protection: simple rate limit on signup (every signup creates a real Circle wallet).
+After Part A: full flow end to end, commit, push, deploy, and **tell the user it's done before starting Part B.**
+
+Part B, extras, in order, each time-boxed 2 h:
+6. pgvector search on snippets, filtered by course first, combined with the keyword search.
+7. ERC-8004 agent identity on Arc testnet for the tutor (Arc tutorial); record allowed/blocked purchases toward its reputation if feasible.
+8. QuickNode Stream on Arc testnet watching the platform wallet: filter USDC transfers out (cash-outs), webhook to our API marks the cash-out "confirmed onchain". The user creates the account + Stream from exact settings we give.
+Rules for Part B: commit + push before each extra (rollback point); each must not break Part A (rerun the full flow after each); not working by its time-box → stop, revert, explain, move on; anything unfinished at 11 PM → reverted and listed under "What's next".
+
+README additions: "Known limitations" stated honestly (raw agent key, ledger-based author payouts, Base Sepolia funds not usable in-app, no memo on the CCTP leg, approval-timeout budget behavior). If pgvector isn't finished, describe it in the scaling section. If the QuickNode Stream is built, document network, dataset, filter, destination, and why (bounty requirement).
 
 **Thursday: submission materials**
 - README (see below).

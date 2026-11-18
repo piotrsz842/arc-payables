@@ -12,6 +12,7 @@
     "typecheck": "tsc -p . --incremental false",
     "check-db": "tsx --env-file=.env scripts/check-db.ts",
     "seed": "tsx --conditions=react-server --env-file=.env scripts/seed.ts",
+    "outside-agent": "tsx --env-file=.env scripts/outside-agent.ts",
     "payout": "tsx --conditions=react-server --env-file=.env scripts/payout.ts",
     "bridge-estimate": "tsx --env-file=.env scripts/bridge-estimate.ts",
     "make-agent-wallet": "tsx --env-file=.env scripts/make-agent-wallet.ts",
