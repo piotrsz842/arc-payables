@@ -68,8 +68,8 @@ Every question has two costs: the **notes** (fractions of a cent, paid to studen
 | Setup | Model calls | AI cost per question |
 |---|---|---|
 | Tutor Opus 5.5, checker Opus 5.5 (first version) | 4 | $0.041 |
-| **Tutor Opus 5.5, checker Haiku 5.5 (current)** | 4 | **$0.026** |
-| Tutor and checker on Haiku 5.5 (measured for comparison) | 4 | $0.001 |
+| Tutor Opus 5.5, checker Haiku 5.5 (setting `TUTOR_MODEL=claude-opus-5-5`) | 4 | $0.028 |
+| **Tutor and checker on Haiku 5.5 (default)** | 4 | **$0.001** |
 
 How we keep it down:
 - **Rules before AI.** Loop, duplicate, price cap, budget and balance checks are plain code and run first; reported or deleted sections can't even be found. When a rule decides, no model is called.
@@ -77,9 +77,13 @@ How we keep it down:
 - **Prompt caching** on the tutor's tool loop: each step re-reads the same instructions and history from cache at a fraction of the price.
 - **Capped outputs:** tutor 4,000 tokens per step, checker about 150 per candidate, upload previews about 200 per section.
 
-**Who pays:** the platform's fee per purchase (see What's next) covers model cost. At $0.026 per question, a fee of a few cents per question covers it on Opus. On Haiku it would be a tenth of a cent. Test runs mock the AI (`npm run test-checker` uses a fake judge); real-model checks are opt-in (`-- --live`).
+**Why the tutor defaults to Haiku 5.5:** the hard part, knowing how *this* course teaches a topic, comes from the students' study guides the tutor buys, not from the model's own knowledge. Given those sections, Haiku writes a correct, cited answer built on the course's worked examples and exam tips for about 1/26 of Opus's cost (side-by-side in [`docs/tutor-model-comparison.md`](docs/tutor-model-comparison.md)). The model is a setting (`TUTOR_MODEL`). Routing harder questions automatically to a stronger model is listed under What's next.
+
+**Who pays:** the platform's fee per purchase (see What's next) covers model cost. On Haiku that's about a tenth of a cent per question; on Opus, a few cents. Test runs mock the AI (`npm run test-checker` uses a fake judge); real-model checks are opt-in (`-- --live`).
 
 ## What's next
+- **Bank payouts** through an off-ramp partner: authors cash out to a bank account in dollars. The cash-out screen already shows the option as "coming soon". Today authors can spend earnings on tutoring or send them to a crypto wallet.
+- **Smart model routing:** answer most questions with Haiku and route hard ones (multi-step proofs, long derivations, low checker confidence) to a stronger model.
 - **Professor opt-in per course:** an instructor approves their course on the platform, can request removals directly, and can take a revenue share. This turns "students selling notes" into a course-sanctioned resource.
 - **Platform fee:** a small cut per purchase to cover the cost of running the AI tutor and checker.
 - Direct per-purchase author payouts (today authors are credited in our ledger and paid at cash-out), and author reputation built from ratings and upheld reports.
