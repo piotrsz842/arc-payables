@@ -5,13 +5,14 @@
  *   npm run payout -- <email> <amountUsd> base_sepolia
  *   npm run payout -- verify <arcTxHash> <payoutId>     read a payout back from Arc, no money moves
  *   npm run payout -- list <email>
+ *   npm run payout -- quote <email> <amountUsd> arc|base_sepolia   fees + amount that arrives, no money moves
  */
 import { createClient } from "@supabase/supabase-js";
 import type { Hex } from "viem";
 import { EXPLORER, payoutMemoId, readMemoPayment } from "../lib/arc.js";
 import { requireEnv } from "../lib/circle.js";
 import { toUsd, totalsFor } from "../lib/ledger.js";
-import { cashOut, isDestination, listPayouts } from "../lib/payouts.js";
+import { cashOut, isDestination, listPayouts, quoteCashOut } from "../lib/payouts.js";
 
 const db = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("SUPABASE_SECRET_KEY"), {
   auth: { persistSession: false },
@@ -30,6 +31,8 @@ const [a, b, c] = process.argv.slice(2);
 if (a === "verify" && b && c) {
   const p = await readMemoPayment(b as Hex);
   console.log({ ...p, memoIdMatches: p.memoId === payoutMemoId(c) });
+} else if (a === "quote" && b && c && isDestination(process.argv[5] ?? "")) {
+  console.log(await quoteCashOut(db, await userByEmail(b), c, process.argv[5] as "arc" | "base_sepolia"));
 } else if (a === "list" && b) {
   const user = await userByEmail(b);
   for (const p of await listPayouts(db, user.id)) console.log(p.createdAt, `$${p.amountUsd}`, p.detail);
