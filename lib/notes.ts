@@ -165,8 +165,8 @@ export async function saveNote(
 }
 
 // Similarity (cosine, 0–1) at or above which an upload counts as a copy.
-export const DUPLICATE_OF_SECTION = 0.95;
-export const DUPLICATE_OF_ANSWER = 0.9;
+export const DUPLICATE_OF_SECTION = 0.94; // tuned 2026-11-18: own work ≤0.88, copies ≥0.997 (npm run tune-duplicates)
+export const DUPLICATE_OF_ANSWER = 0.9; // tuned: own explanation of an answered topic 0.84, pasted answers ≥0.96
 
 export class DuplicateContentError extends Error {}
 
