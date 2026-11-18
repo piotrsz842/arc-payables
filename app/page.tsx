@@ -3,13 +3,13 @@ import { EXPLORER } from "@/lib/arc";
 import { requireUser } from "@/lib/auth";
 import { toMicro, toUsd, totalsFor } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
-import { DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
+import { cashableOf, DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
 import { TOP_UP_AMOUNTS } from "@/lib/topup";
-import { cashOutAction, topUpAction } from "./actions";
+import { topUpAction } from "./actions";
 import { SubmitButton } from "./submit-button";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // a cash-out to Base Sepolia waits for the bridge
+
 
 const money = (micro: bigint) => `$${Number(toUsd(micro)).toFixed(3)}`;
 
@@ -67,7 +67,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
       {cashout_error && <p className="rounded bg-red-50 p-3 text-sm text-red-800">{cashout_error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Your balance" value={money(totals.balance)} hint="Spend it on questions or cash it out" />
+        <Stat label="Your balance" value={money(totals.balance)} hint="Spend it on questions; cash out what you earned" />
         <Stat label="Earned from your notes" value={money(totals.earnings)} hint="Every time the tutor uses them" />
         <Stat label="Free questions left" value={String(user.freeQuestionsLeft)} hint="Then questions use your balance" />
       </div>
@@ -120,22 +120,27 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Cash out</h2>
-        <form action={cashOutAction} className="flex flex-wrap items-end gap-2">
+        <p className="text-sm text-slate-600">
+          You can cash out what your notes earned: <span className="font-medium">{money(cashableOf(totals))}</span> right now.
+          Money you added is for asking questions.
+        </p>
+        {/* Goes to a confirm screen that shows fees and the amount that arrives. */}
+        <form action="/cash-out" method="get" className="flex flex-wrap items-end gap-2">
           <label className="text-sm">
             <span className="block text-slate-500">Amount ($)</span>
             <input name="amount" inputMode="decimal" placeholder="0.25" required className="w-28 rounded border px-3 py-2" />
           </label>
           <label className="text-sm">
             <span className="block text-slate-500">Send to</span>
-            <select name="destination" className="rounded border bg-white px-3 py-2">
+            <select name="to" className="rounded border bg-white px-3 py-2">
               {Object.entries(DESTINATIONS).map(([key, d]) => (
                 <option key={key} value={key}>
-                  {d.label} (min ${d.minUsd}{key === "base_sepolia" ? ", transfer fees apply" : ""})
+                  {d.label} (min ${d.minUsd}{key === "base_sepolia" ? ", transfer fees apply" : ", no fee"})
                 </option>
               ))}
             </select>
           </label>
-          <SubmitButton pendingText="Sending… (up to 30 s)" className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white">Cash out</SubmitButton>
+          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white">Review cash-out</button>
         </form>
         {payouts.length > 0 && (
           <ul className="divide-y rounded border bg-white text-sm">

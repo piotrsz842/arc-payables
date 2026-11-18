@@ -83,6 +83,21 @@ const FALLBACK_ARC_GAS_USD = "0.04";
 
 const newPayoutId = () => `PO-${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
 
+/**
+ * What a cash-out would cost and deliver, for the confirm screen. Runs every
+ * check a real cash-out runs, moves no money.
+ */
+export async function quoteCashOut(
+  db: SupabaseClient,
+  user: { id: string; walletAddress: string },
+  amountUsd: string,
+  destination: Destination,
+) {
+  const { amount, plan } = await checkCashOut(db, user, amountUsd, destination);
+  const fees = plan ? plan.fees : 0n; // Arc: the platform covers the small fees
+  return { amountUsd: toUsd(amount), feesUsd: toUsd(fees), receiveUsd: toUsd(amount - fees) };
+}
+
 /** Main entry: cash out `amountUsd` of the user's balance to `destination`. */
 export async function cashOut(
   db: SupabaseClient,
@@ -90,7 +105,17 @@ export async function cashOut(
   amountUsd: string,
   destination: Destination,
 ): Promise<PayoutDetail> {
-  // --- 1. Check the request against the ledger (cheap, no money moves) ---
+  // --- 1. Check the request (cheap, no money moves) ---
+  const { amount, plan } = await checkCashOut(db, user, amountUsd, destination);
+  return sendCashOut(db, user, amount, destination, plan);
+}
+
+async function checkCashOut(
+  db: SupabaseClient,
+  user: { id: string; walletAddress: string },
+  amountUsd: string,
+  destination: Destination,
+) {
   let amount: bigint;
   try {
     amount = toMicro(amountUsd.trim());
@@ -114,7 +139,16 @@ export async function cashOut(
   // For Base Sepolia, work out the fees first: if they'd eat the whole
   // amount, stop here, before any money moves.
   const plan = destination === "base_sepolia" ? await planBridge(user.walletAddress, amount) : null;
+  return { amount, plan };
+}
 
+async function sendCashOut(
+  db: SupabaseClient,
+  user: { id: string; walletAddress: string },
+  amount: bigint,
+  destination: Destination,
+  plan: Awaited<ReturnType<typeof planBridge>> | null,
+): Promise<PayoutDetail> {
   // --- 2. Write the payout row FIRST (balance drops now), then re-check ---
   const detail: PayoutDetail = { payoutId: newPayoutId(), destination, status: "sending" };
   const { data: row, error } = await db
@@ -229,7 +263,7 @@ async function planBridge(walletAddress: string, payout: bigint) {
   for (const f of estimate.fees) if (f.amount) fees += ceilMicro(f.amount);
   const amount = payout - gas;
   if (amount <= fees - gas) {
-    throw new CashOutError(`Transfer fees are about $${toUsd(fees)} right now, so please cash out more than that.`);
+    throw new CashOutError(`Transfer fees are about $${Number(toUsd(fees)).toFixed(3)} right now, so please cash out more than that.`);
   }
   return { kit, from, to, amount, fees };
 }

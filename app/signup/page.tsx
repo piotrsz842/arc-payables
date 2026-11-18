@@ -6,6 +6,7 @@ const ERRORS: Record<string, string> = {
   invalid: "Please fill in every field. Passwords need at least 8 characters.",
   taken: "That email can't be used. Try signing in instead.",
   wallet: "Something went wrong setting up your account. Please try again.",
+  busy: "Too many new accounts right now. Please try again in a little while.",
 };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

@@ -103,9 +103,13 @@ export async function describeChunks(course: string, noteTitle: string, chunks: 
 /** Save a note and its snippets. Returns how many snippets were created. */
 export async function saveNote(
   db: SupabaseClient,
-  note: { authorId: string; course: string; title: string; body: string; idPrefix?: string },
+  // priceUsd: optional fixed price for every section (seeded "premium" notes); otherwise priced by length.
+  note: { authorId: string; course: string; title: string; body: string; idPrefix?: string; priceUsd?: string },
 ): Promise<{ noteId: string; sections: number }> {
   const course = normalizeCourse(note.course);
+  if (note.priceUsd !== undefined && !(Number(note.priceUsd) >= 0.001 && Number(note.priceUsd) <= 0.01)) {
+    throw new Error("A fixed price must be between $0.001 and $0.01 (the tutor's per-snippet cap).");
+  }
   const chunks = splitNote(note.body);
   if (chunks.length === 0) throw new Error("The note is empty.");
   const previews = await describeChunks(course, note.title, chunks);
@@ -127,7 +131,7 @@ export async function saveNote(
     title: previews[i].title,
     summary: previews[i].summary,
     content,
-    price_usd: priceFor(content),
+    price_usd: note.priceUsd ?? priceFor(content),
   }));
   const { error: snippetError } = await db.from("snippets").insert(rows);
   if (snippetError) {

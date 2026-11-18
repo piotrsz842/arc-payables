@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { signupAllowed } from "@/lib/rate-limit";
 import { db } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
 import { createUserWallet } from "@/lib/wallets";
@@ -15,6 +16,7 @@ export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   if (!displayName || !email || password.length < 8) redirect("/signup?error=invalid");
+  if (!(await signupAllowed())) redirect("/signup?error=busy"); // each signup makes a real wallet
 
   // 1. The login. email_confirm: true skips the confirmation email (hackathon demo).
   const { data: created, error: createError } = await db.auth.admin.createUser({ email, password, email_confirm: true });
