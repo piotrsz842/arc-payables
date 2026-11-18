@@ -45,6 +45,7 @@ export async function proxy(request: NextRequest) {
 // Skip static files, images, and the paid snippet API; run on everything else.
 // /api/snippets is protected by PAYMENT (x402), not by login: the buyer is
 // an AI agent with no login cookie, and a redirect would break the 402 flow.
+// /agent.json is the tutor's public ERC-8004 metadata.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/snippets|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/snippets|agent\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

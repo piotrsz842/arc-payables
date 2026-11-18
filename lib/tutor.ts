@@ -19,6 +19,7 @@ import { getAgent } from "./agent-wallet";
 import { QuestionJudge } from "./checker";
 import { UsageMeter } from "./usage";
 import { embed, embeddingsEnabled, toVector } from "./embeddings";
+import { recordPurchaseDiscipline } from "./erc8004";
 import { recordEntry, toMicro, toUsd, totalsFor } from "./ledger";
 import { finishRun, proposePurchase, spentInRun, startRun, type AskHuman, type HumanAnswer } from "./purchases";
 import { getPreview, searchPreviews } from "./snippets";
@@ -189,13 +190,21 @@ export async function askTutor(opts: {
   if (charged > 0n) {
     await recordEntry(db, { userId: user.id, kind: "spend", amountUsd: toUsd(-charged), runId: run.id });
   }
-  const { data: loopBlocks } = await db.from("purchase_decisions").select("id").eq("run_id", run.id).eq("rule", "loop");
+  const { data: decisions } = await db.from("purchase_decisions").select("verdict, rule, human_decision").eq("run_id", run.id);
+  const loopBlocks = (decisions ?? []).filter((d) => d.rule === "loop");
   await finishRun(db, run.id, {
-    status: (loopBlocks?.length ?? 0) >= 2 ? "stopped_looping" : "finished",
+    status: loopBlocks.length >= 2 ? "stopped_looping" : "finished",
     answer,
     chargedUsd: toUsd(charged),
   });
   emit({ type: "done", runId: run.id, free: freeQuestion, spentUsd: toUsd(spent), chargedUsd: toUsd(charged) });
+
+  // ERC-8004 reputation: how many of the tutor's proposals passed the checker (sent in the background).
+  await recordPurchaseDiscipline({
+    runId: run.id,
+    proposed: decisions?.length ?? 0,
+    allowed: (decisions ?? []).filter((d) => d.verdict === "allow" || d.human_decision === "approved").length,
+  });
 
   // Remember the answer's meaning, so an upload that copies AI tutor output
   // can be spotted (near-duplicate check). Best effort.

@@ -65,6 +65,13 @@ export default async function AnswerPage({ params }: { params: Promise<{ runId: 
           <p key={d.id} className="font-mono">{d.title}: Gateway transfer {d.gateway_transfer_id}</p>
         ))}
         <p className="mt-1">Run {run.id}</p>
+        {process.env.TUTOR_AGENT_ID && (
+          <p className="mt-1">
+            The tutor has an on-chain identity on Arc: ERC-8004 agent #{process.env.TUTOR_AGENT_ID}. After each question, the checker
+            records how many of its purchase proposals passed as reputation (tag “purchase_discipline”).{" "}
+            <a className="underline" href="/agent.json" target="_blank">Agent profile</a>
+          </p>
+        )}
       </details>
 
       <Link href="/ask" className="inline-block rounded bg-slate-900 px-4 py-2 font-medium text-white">Ask another question</Link>
