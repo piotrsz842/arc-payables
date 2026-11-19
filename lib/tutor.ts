@@ -79,25 +79,7 @@ export async function askTutor(opts: {
   const judge = new QuestionJudge(question, meter); // one checker call covers every candidate found
 
   // 1. Who pays? A free question, or the student's balance.
-  let freeQuestion = false;
-  let budget = toMicro(QUESTION_BUDGET_USD);
-  if (user.freeQuestionsLeft > 0) {
-    // Only use it if it's still there (guards against two questions at once).
-    const { data } = await db
-      .from("profiles")
-      .update({ free_questions_left: user.freeQuestionsLeft - 1 })
-      .eq("id", user.id)
-      .eq("free_questions_left", user.freeQuestionsLeft)
-      .select("id");
-    freeQuestion = (data?.length ?? 0) > 0;
-  }
-  if (!freeQuestion) {
-    const { balance } = await totalsFor(db, user.id);
-    if (balance < toMicro(MIN_BALANCE_USD)) throw new NeedsTopUpError("Out of free questions and balance.");
-    if (balance < budget) budget = balance; // can't spend more than they have
-  }
-
-  const run = await startRun(db, { question, budgetUsd: toUsd(budget), askedBy: user.id, freeQuestion });
+  const { run, freeQuestion, budget } = await startPaidRun(db, user, question);
   emit({ type: "started", runId: run.id, free: freeQuestion, budgetUsd: toUsd(budget) });
   const agent = getAgent();
 
@@ -222,6 +204,41 @@ export async function askTutor(opts: {
   console.log(`[cost] question ${run.id}
 ${meter.summary()}`);
   return { runId: run.id, answer, usage: meter };
+}
+
+/**
+ * Who pays for a question (or a study session): a free question if the
+ * student has one left, otherwise their balance (budget = min($0.01, balance)).
+ * Starts the run in the decision log.
+ */
+export async function startPaidRun(db: SupabaseClient, user: { id: string; freeQuestionsLeft: number }, question: string) {
+  let freeQuestion = false;
+  let budget = toMicro(QUESTION_BUDGET_USD);
+  if (user.freeQuestionsLeft > 0) {
+    // Only use it if it's still there (guards against two questions at once).
+    const { data } = await db
+      .from("profiles")
+      .update({ free_questions_left: user.freeQuestionsLeft - 1 })
+      .eq("id", user.id)
+      .eq("free_questions_left", user.freeQuestionsLeft)
+      .select("id");
+    freeQuestion = (data?.length ?? 0) > 0;
+  }
+  if (!freeQuestion) {
+    const { balance } = await totalsFor(db, user.id);
+    if (balance < toMicro(MIN_BALANCE_USD)) throw new NeedsTopUpError("Out of free questions and balance.");
+    if (balance < budget) budget = balance; // can't spend more than they have
+  }
+  const run = await startRun(db, { question, budgetUsd: toUsd(budget), askedBy: user.id, freeQuestion });
+  return { run, freeQuestion, budget };
+}
+
+/** Charge the student (unless it was free) for what was actually bought, from the log. */
+export async function chargeForRun(db: SupabaseClient, userId: string, runId: string, freeQuestion: boolean) {
+  const spent = await spentInRun(db, runId);
+  const charged = freeQuestion ? 0n : spent;
+  if (charged > 0n) await recordEntry(db, { userId, kind: "spend", amountUsd: toUsd(-charged), runId });
+  return { spent, charged };
 }
 
 /** Everything the answer page shows, read back from the database. */
