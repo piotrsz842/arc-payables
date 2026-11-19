@@ -183,6 +183,7 @@ Every cash-out puts its payout ID on chain through Arc's Memo contract. A **Quic
 | Destination | **Webhook** `POST https://arc-payables-chi.vercel.app/api/streams/quicknode`, payload compression off |
 | Security | Each request is signed: `X-QN-Signature` = HMAC-SHA256(nonce + timestamp + body) with the stream's security token. We reject bad signatures (401) and messages older than 10 minutes. |
 | What we do | Decode the Memo event, read the payout ID, find that cash-out in our ledger, and stamp it "confirmed on chain" (by QuickNode, with tx hash and block). |
+| Verified | A live $0.01 cash-out was marked confirmed by the stream within about a second of being sent. |
 
 **Why:** our app already reads its own transactions back from Arc. A stream is a *second, independent* witness: if our server crashes mid-cash-out, or someone claims a payout never happened, the confirmation comes from the chain via a third party. The same stream could later drive author notifications or accounting exports. Test without QuickNode: `npm run test-stream-webhook -- <cash-out tx hash>` builds a real Logs payload and signs it.
 

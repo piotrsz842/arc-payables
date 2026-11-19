@@ -287,6 +287,11 @@ function ceilMicro(usd: string): bigint {
 }
 
 async function save(db: SupabaseClient, rowId: number, detail: PayoutDetail): Promise<PayoutDetail> {
+  // The QuickNode webhook may have stamped "confirmed on chain" while this cash-out
+  // was still finishing (it can be that fast): keep that stamp, don't overwrite it.
+  const { data: current } = await db.from("ledger_entries").select("detail").eq("id", rowId).single();
+  const onchain = (current?.detail as PayoutDetail | null)?.onchain;
+  if (onchain && !detail.onchain) detail = { ...detail, onchain };
   const { error } = await db.from("ledger_entries").update({ detail }).eq("id", rowId);
   if (error) console.error("Could not update payout", detail.payoutId, error.message);
   return detail;

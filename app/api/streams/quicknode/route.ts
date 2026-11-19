@@ -20,24 +20,6 @@ import { db } from "@/lib/supabase/admin";
 type Log = { address?: string; topics?: Hex[]; data?: Hex; transactionHash?: string; blockNumber?: string };
 
 /** Why a request was rejected (or "ok"). Logged, never the secrets themselves. */
-// --- Temporary diagnostics (no secrets): what QuickNode actually sends. ---
-// Saved to the private storage bucket so we can compare with the chain.
-let deliveries = 0;
-async function saveDebugSample(payload: unknown, body: string, logs: Log[]) {
-  deliveries++;
-  const blocks = logs.map((l) => (l.blockNumber ? Number(l.blockNumber) : 0)).filter(Boolean);
-  const meta = (payload as { metadata?: unknown })?.metadata ?? null;
-  const summary = { at: new Date().toISOString(), maxBlock: blocks.length ? Math.max(...blocks) : null, logs: logs.length, metadata: meta, topKeys: Object.keys((payload as object) ?? {}) };
-  const put = (path: string, data: string) =>
-    db.storage.from("handwritten").upload(path, new Blob([data], { type: "application/json" }), { upsert: true }).catch(() => null);
-  // The newest block we've received (every 10th delivery, to keep it cheap).
-  if (deliveries % 10 === 1) await put("_debug/quicknode/latest.json", JSON.stringify(summary));
-  // Any delivery mentioning the Memo contract: keep it exactly as received.
-  if (body.toLowerCase().includes("5294e9927c3306dcbadb03fe70b92e01ccede505")) {
-    await put(`_debug/quicknode/memo-${Date.now()}.json`, body.slice(0, 200_000));
-  }
-}
-
 function checkSignature(req: Request, body: string): string {
   const token = process.env.QUICKNODE_SECURITY_TOKEN;
   const nonce = req.headers.get("x-qn-nonce");
@@ -72,9 +54,7 @@ export async function POST(req: Request) {
       else Object.values(v).forEach(collect);
     }
   };
-  const payload = JSON.parse(body);
-  collect(payload);
-  await saveDebugSample(payload, body, logs);
+  collect(JSON.parse(body));
   const platform = process.env.TREASURY_WALLET_ADDRESS as Address;
   let confirmed = 0;
 
