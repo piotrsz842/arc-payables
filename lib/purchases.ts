@@ -67,6 +67,15 @@ export async function finishRun(
 }
 
 /** Total paid for snippets in this run, from the log. */
+/** Sections this student paid for in any earlier question (theirs to reuse for free). */
+export async function ownedSnippetIds(db: SupabaseClient, userId: string, exceptRunId: string): Promise<Set<string>> {
+  const { data: runs } = await db.from("agent_runs").select("id").eq("asked_by", userId).neq("id", exceptRunId);
+  const runIds = (runs ?? []).map((r) => r.id);
+  if (runIds.length === 0) return new Set();
+  const { data: paid } = await db.from("purchase_decisions").select("snippet_id").eq("paid", true).in("run_id", runIds);
+  return new Set((paid ?? []).map((p) => p.snippet_id));
+}
+
 export async function spentInRun(db: SupabaseClient, runId: string): Promise<bigint> {
   const { data, error } = await db.from("purchase_decisions").select("price_usd").eq("run_id", runId).eq("paid", true);
   if (error) throw new Error(`Could not read decision log: ${error.message}`);

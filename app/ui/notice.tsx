@@ -16,11 +16,12 @@ export function Notice({ kind = "success", children }: { kind?: "success" | "inf
   );
 }
 
-/** Dollars, always, without hiding fractions of a cent: $0.013, $0.27, $1.24, $0 (not $0.000). */
+/** Dollars, always, without hiding fractions of a cent: $0.0025, $0.013, $0.27, $1.24, $0 (not $0.0000). */
 export function usd(value: number | string): string {
   const n = Number(value);
   if (n === 0) return "$0";
   if (Math.abs(n) >= 10) return `$${n.toFixed(2)}`;
-  const s = n.toFixed(3);
-  return `$${s.endsWith("0") ? s.slice(0, -1) : s}`;
+  let s = n.toFixed(4); // our prices are rounded to $0.0001
+  while (s.endsWith("0") && s.split(".")[1].length > 2) s = s.slice(0, -1);
+  return `$${s}`;
 }

@@ -23,7 +23,7 @@ const LENGTHS: Record<StudyKind, { label: string; count: number }[]> = {
 export function StudyClient({ freeLeft }: { freeLeft: number }) {
   const router = useRouter();
   const [kind, setKind] = useState<StudyKind>("quiz");
-  const [course, setCourse] = useState("CPSC 221");
+  const [course, setCourse] = useState("");
   const [topic, setTopic] = useState("");
   const [count, setCount] = useState(5);
   const [loading, setLoading] = useState(false);

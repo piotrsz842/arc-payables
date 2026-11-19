@@ -20,7 +20,7 @@ type Step =
       title: string;
       priceUsd: string;
       reason: string;
-      result?: { bought: true; authorName: string } | { bought: false; why: string };
+      result?: { bought: true; authorName: string; reused?: boolean } | { bought: false; why: string };
       approval?: { logId: number; why: string; state: "waiting" | "sending" | "approved" | "denied" | "pending" };
     };
 
@@ -64,7 +64,7 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
         updateNote((s) => s.approval?.logId === e.logId, (s) => ({ ...s, approval: { ...s.approval!, state: e.answer } }));
         break;
       case "bought":
-        updateNote((s) => s.snippetId === e.snippetId && !s.result, (s) => ({ ...s, result: { bought: true, authorName: e.authorName } }));
+        updateNote((s) => s.snippetId === e.snippetId && !s.result, (s) => ({ ...s, result: { bought: true, authorName: e.authorName, reused: e.reused } }));
         break;
       case "not_bought":
         updateNote((s) => s.snippetId === e.snippetId && !s.result, (s) => ({ ...s, result: { bought: false, why: e.why } }));
@@ -151,7 +151,7 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
   const bought = notes.filter((s) => s.result?.bought);
   const skipped = notes.filter((s) => s.result && !s.result.bought);
   const waiting = notes.filter((s) => s.approval && (s.approval.state === "waiting" || s.approval.state === "sending"));
-  const spent = bought.reduce((sum, s) => sum + Number(s.priceUsd), 0);
+  const spent = bought.reduce((sum, s) => sum + (s.result?.bought && s.result.reused ? 0 : Number(s.priceUsd)), 0);
   const searches = steps.filter((s) => s.kind === "search");
 
   return (
@@ -216,7 +216,7 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
                           {s.result && !s.result.bought && <Ban size={15} className="text-black/40" aria-hidden />}
                           {s.title}
                         </span>
-                        <span className={s.result?.bought ? "font-semibold text-emerald-700" : "text-black/40"}>{usd(s.priceUsd)}</span>
+                        <span className={s.result?.bought ? "font-semibold text-emerald-700" : "text-black/40"}>{s.result?.bought && s.result.reused ? "already yours, free" : usd(s.priceUsd)}</span>
                       </div>
                       {s.result?.bought && <p className="text-xs text-black/50">by {s.result.authorName}</p>}
                       <p className="mt-1 text-black/55">Why the tutor wanted it: {s.reason}</p>

@@ -21,8 +21,8 @@ import { UsageMeter } from "./usage";
 import { embed, embeddingsEnabled, toVector } from "./embeddings";
 import { recordPurchaseDiscipline } from "./erc8004";
 import { recordEntry, toMicro, toUsd, totalsFor } from "./ledger";
-import { finishRun, proposePurchase, spentInRun, startRun, type AskHuman, type HumanAnswer } from "./purchases";
-import { getPreview, searchPreviews } from "./snippets";
+import { finishRun, ownedSnippetIds, proposePurchase, spentInRun, startRun, type AskHuman, type HumanAnswer } from "./purchases";
+import { getPreview, getSnippetWithContent, searchPreviews } from "./snippets";
 
 export const QUESTION_BUDGET_USD = "0.01"; // most one question may spend on snippets
 const MIN_BALANCE_USD = "0.001"; // below this (and no free questions), ask the student to top up
@@ -40,7 +40,7 @@ You can search study notes written by other students at the same school (search_
 
 How to work:
 - Search first, using the course code if the student gave one.
-- Buy only snippets whose preview clearly helps with this question, usually one to three. For each purchase, give a specific reason tied to the question.
+- Propose every search result whose title or preview shares the question's key terms or concept, even if you doubt it's useful: a separate reviewer, not you, decides which are on topic and worth paying for. Skip only results about an obviously different course subject. For each proposal, give a specific reason tied to the question.
 - Every purchase is checked by a separate reviewer. If a purchase is blocked or needs the student's approval, do not try it again; continue with what you have.
 - Then answer. Build the answer around what the bought sections say about THIS course, and use every course-specific detail in them: worked examples (use the same numbers or arrays), exam and quiz tips, what the professor emphasised, the course's notation, and common mistakes students make. Say where each one comes from, e.g. "The study guide's quiz tip: ..." or "As the course's worked example shows ...".
 - Cite every section you use by title in square brackets right after the point it supports, like [Quicksort pivot choice]. Keep general knowledge separate and say it's general ("In general, ..."). If no sections helped, answer from general knowledge and say so.
@@ -60,7 +60,7 @@ export type TutorEvent =
   | { type: "checking"; snippetId: string; title: string; priceUsd: string; reason: string }
   | { type: "needs_approval"; logId: number; title: string; priceUsd: string; why: string }
   | { type: "approval_result"; logId: number; answer: HumanAnswer }
-  | { type: "bought"; snippetId: string; title: string; priceUsd: string; authorName: string }
+  | { type: "bought"; snippetId: string; title: string; priceUsd: string; authorName: string; reused?: boolean }
   | { type: "not_bought"; snippetId: string; title: string; why: string }
   | { type: "answer"; text: string }
   | { type: "done"; runId: string; free: boolean; spentUsd: string; chargedUsd: string };
@@ -103,6 +103,7 @@ export async function askTutor(opts: {
     },
   });
 
+  let owned: Set<string> | null = null; // sections this student bought in earlier questions (loaded on first purchase)
   const buySnippet = betaZodTool({
     name: "buy_snippet",
     description: "Ask to buy one snippet's full text. A reviewer checks every request first; it may be blocked or need the student's approval.",
@@ -115,6 +116,17 @@ export async function askTutor(opts: {
       const preview = await getPreview(db, snippet_id);
       if (!preview) return JSON.stringify({ status: "error", message: "No snippet with that id." });
       if (preview.authorId === user.id) return JSON.stringify({ status: "blocked", reason: "That is the student's own note." });
+      if (owned === null) owned = await ownedSnippetIds(db, user.id, run.id);
+      if (owned.has(preview.id)) {
+        // Already bought in an earlier question: reuse it, no checker, no payment.
+        const s = await getSnippetWithContent(db, preview.id); // null if reported or deleted since
+        if (s) {
+          const { data: author } = await db.from("profiles").select("display_name").eq("id", preview.authorId).single();
+          emit({ type: "checking", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, reason });
+          emit({ type: "bought", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, authorName: author?.display_name ?? "a student", reused: true });
+          return JSON.stringify({ status: "bought", title: preview.title, content: s.content, note: "The student already owned this section: reused for free." });
+        }
+      }
       emit({ type: "checking", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, reason });
       const outcome = await proposePurchase({ db, agent, baseUrl: opts.baseUrl, run, preview, reason, askHuman: opts.askHuman, meter, judge, approvalThresholdUsd: user.approvalThresholdUsd });
       if (outcome.paid) {
