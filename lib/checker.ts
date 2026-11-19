@@ -28,7 +28,7 @@ import type { UsageMeter } from "./usage";
 // --- Safety limits (USD). Shown to judges as "the agent's guard rails". ---
 export const LIMITS = {
   maxPerPaymentUsd: "0.01", // never pay more than this for one snippet
-  approvalThresholdUsd: "0.005", // above this, a human must approve
+  approvalThresholdUsd: "0.005", // DEFAULT: each student sets their own ("ask me before any purchase over $X")
   maxProposalsPerQuestion: 6, // more proposals than this = the agent is looping
 };
 
@@ -44,6 +44,7 @@ export type CheckerInput = {
   reason: string; // the agent's justification
   priceUsd: string;
   budget: { remainingUsd: string; gatewayAvailableUsd: string };
+  approvalThresholdUsd?: string; // the student's setting; default LIMITS.approvalThresholdUsd
 };
 
 /** What already happened in this question's run (from the decision log, not from the agent). */
@@ -74,6 +75,7 @@ export async function checkPurchase(
   opts: { judge?: Pick<QuestionJudge, "judge">; meter?: UsageMeter } = {}, // judge is swappable (tests use a fake)
 ): Promise<Decision> {
   const price = usd(input.priceUsd);
+  const askAbove = usd(input.approvalThresholdUsd ?? LIMITS.approvalThresholdUsd);
 
   // 1. Loop detection: the agent keeps proposing instead of answering.
   if (history.proposedCount >= LIMITS.maxProposalsPerQuestion) {
@@ -112,7 +114,7 @@ export async function checkPurchase(
   }
   if (relevance.relevant === "no") return { ...block("relevance", relevance.explanation), relevance };
   if (relevance.relevant === "unsure") {
-    const pricey = price > usd(LIMITS.approvalThresholdUsd) ? ` It also costs ${show(price)}, above the approval threshold.` : "";
+    const pricey = price > askAbove ? ` It also costs ${show(price)}, above your approval setting.` : "";
     return { verdict: "ask_human", rule: "relevance", reason: `Unsure if relevant: ${relevance.explanation}${pricey}`, relevance };
   }
 
@@ -123,11 +125,11 @@ export async function checkPurchase(
   }
 
   // 6. Expensive (but within the cap) → a human signs off.
-  if (price > usd(LIMITS.approvalThresholdUsd)) {
+  if (price > askAbove) {
     return {
       verdict: "ask_human",
       rule: "approval_threshold",
-      reason: `Relevant, but ${show(price)} is above the ${show(usd(LIMITS.approvalThresholdUsd))} approval threshold.`,
+      reason: `Relevant, but ${show(price)} is above your ${show(askAbove)} approval setting.`,
       relevance,
     };
   }

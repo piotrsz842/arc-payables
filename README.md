@@ -28,7 +28,7 @@ Built for the UBC 2026 Hackathon on **Arc testnet** (Circle's stablecoin L1). Li
 ```
 
 1. **Signup** creates a Circle developer-controlled wallet on Arc behind the scenes. The student never sees an address.
-2. **Upload:** a guide is split into sections at its headings. Claude writes a one-line preview for each, and each is priced by length ($0.001 per ~150 words, max $0.004). A near-duplicate check (pgvector) rejects copies of existing sections and of past tutor answers.
+2. **Upload:** a guide is split into sections at its headings. Claude writes a one-line preview for each, and the platform prices each section (see *Pricing*). A near-duplicate check (pgvector) rejects copies of existing sections and of past tutor answers.
 3. **Ask:** the tutor searches free previews (pgvector meaning search, filtered to the course first, plus keywords) and proposes sections to buy, each with a reason.
 4. **Checker:** plain-code rules run first. Only if they pass does one isolated Claude Haiku call judge relevance and course-specific value. The verdict is logged *before* any money moves.
 5. **Pay:** allowed sections are bought over **x402** with **Circle Gateway Nanopayments**. The author's ledger balance rises immediately, and Gateway settles the payments to the platform in batches on Arc.
@@ -49,7 +49,7 @@ Design rule: **the AI may judge relevance, but code decides about money.**
 | Wallet balance | block if the agent's Gateway balance can't cover it | |
 | Relevance (Claude Haiku) | block if off topic; ask the student if the preview is too vague to tell | sees **only** the question and the free previews: not the agent's reasons, the price or the conversation, so it can't be talked into a yes |
 | Course-specific value | block "generic" sections (textbook facts the tutor already knows) | students are paid for what only the course's students know |
-| Approval threshold | **ask the student** above **$0.005** | big purchases need a human: "Buy it" / "Skip" in the chat; no answer within 2 minutes = skip |
+| Approval setting | **ask the student** above **their own setting** ("Ask me before any single purchase over $X", default $0.005, on the Earnings page) | the student decides how much the tutor may spend without asking: "Buy it" / "Skip" in the chat; no answer within 2 minutes = skip |
 | Fail safe | if the judge can't run (outage, refusal) → ask the student | the checker never fails open |
 
 Every decision is logged in `purchase_decisions` *before* payment. The receipt page and `npm run decision-log` show it. Tests: `npm run test-checker` (12 offline tests with a fake judge; `-- --live` adds one real batched judge call), `npm run stage2-demo` (8 scripted proposals showing every rule).
@@ -83,10 +83,36 @@ Every decision is logged in `purchase_decisions` *before* payment. The receipt p
 
 Our tutor: **ERC-8004 agent #897944**. Platform wallet: `0x682f94386d613fb53fe4e21c566d13fcc4548c80`.
 
+## Pricing: set by the platform, not by authors
+
+```
+price = $0.002 × L × R      (capped at $0.01, rounded to $0.0001)
+L = 1 + 0.5 × min(words, 300) / 300                       length: ×1.0 to ×1.5
+n = helpful + not helpful ratings on answers that used the author's guides
+s = (helpful + 2) / (n + 4)    q = 0.5 + n/(n+10) × (s − 0.5)  (smoothed: starts at 0.5)
+R = max(0.5, 2q)  if q < 0.5      R = 1 + (q − 0.5) × 4.67  if q ≥ 0.5   rating: ×0.5 to ×3.3
+```
+
+| Author's ratings | Words | Price per section |
+|---|---|---|
+| New author | 300 | $0.0030 |
+| New author | 150 | $0.0025 |
+| 3 helpful, 0 not (few votes barely move it) | 300 | $0.0037 |
+| 10 helpful, 0 not | 300 | $0.0055 |
+| 48 of 50 helpful | 300 | $0.0080 |
+| 100 of 100 helpful | 300 | $0.0091 |
+| 2 of 10 helpful (few votes) | 300 | $0.0024 |
+| 5 of 30 helpful (poorly rated) | 300 | $0.0017 |
+| 0 of 50 helpful | 300 | $0.0015 |
+
+(`npm run price-table`.) Authors see the breakdown on upload, on their home screen and on each guide's page, e.g. *"Base $0.002 · length ×1.50 · rating ×1.00 = $0.0030 per section. Prices rise as students rate your guides helpful."* Sections are re-priced whenever a rating comes in.
+
+**Why authors can't set prices:** the buyer is an AI agent with a budget, and the price is part of what the checker trusts. A platform formula keeps prices predictable for students, the same rules for every author, and tied to what students actually find helpful. Letting authors name a price would invite gaming, such as a "premium" label on ordinary notes. The smoothing (everyone starts neutral, confidence grows with the number of ratings) means a handful of votes can't swing a price.
+
 ## Why x402
 
 A study-guide section is worth a fraction of a cent. Subscriptions, API keys and invoices all cost more than that to set up. With x402 the price lives in the HTTP response itself (`402 Payment Required`), and payment is one signed header on the retry. That means:
-- **Any agent can buy**, not just our tutor. `scripts/outside-agent.ts` has no account and uses none of our code: it reads free previews, gets a 402, pays $0.001 and gets the section, and the author is credited all the same.
+- **Any agent can buy**, not just our tutor. `scripts/outside-agent.ts` has no account and uses none of our code: it reads free previews, gets a 402 with the section's price (about $0.002–0.003), pays and gets the section, and the author is credited all the same.
 - **Pay-per-use matches the value**: authors earn exactly when their work is used.
 - **With Gateway Nanopayments behind it**, tiny payments are practical: signed offchain, settled in batches.
 
@@ -186,7 +212,7 @@ How we keep it down:
 
 - **Search:** sections carry pgvector embeddings (Voyage `voyage-4-lite`, 1024 dims) with an HNSW index. Search filters to the course *inside Postgres* first, then ranks by meaning plus keyword hits, so it stays fast as the library grows. The fallback is keyword search.
 - **Storage:** text in Postgres (Supabase); handwritten originals in a private storage bucket. Sections are small (max 20 per guide, ~250 words each).
-- **Payments:** Gateway Nanopayments are signed offchain and **settled in batches** on Arc, so a million $0.001 purchases don't mean a million transactions. Authors are credited in our ledger instantly and paid out on demand.
+- **Payments:** Gateway Nanopayments are signed offchain and **settled in batches** on Arc, so a million fraction-of-a-cent purchases don't mean a million transactions. Authors are credited in our ledger instantly and paid out on demand.
 - **Checker cost:** rules run first and skip the AI. Then one Claude Haiku call per question covers *all* candidate sections, at about $0.0003 a question. Measured cost per question is in "Cost at scale".
 - **Moderation:** one report takes a section off sale instantly; review is a queue (`npm run reports`). The near-duplicate check and own-work confirmation run at upload. At scale: reviewer tooling, author reputation, and professor opt-in per course.
 
@@ -207,9 +233,9 @@ How we keep it down:
 Open **https://arc-payables-chi.vercel.app** on a phone or laptop.
 
 1. **Sign up** with any email: you get 3 free questions. No wallet setup, no crypto words.
-2. **Ask** (home screen or the Ask tab), for example *"CPSC 221: why does quicksort take O(n²) on sorted input?"*. Watch the summary chip ("Used 1 study guide · $0.001 · Skipped 1") and open **Details** to see each checker decision. The answer cites the study guide it used.
+2. **Ask** (home screen or the Ask tab), for example *"CPSC 221: why does quicksort take O(n²) on sorted input?"*. Watch the summary chip ("Used 1 study guide · $0.003 · Skipped 1") and open **Details** to see each checker decision. The answer cites the study guide it used.
 3. **See a block:** on-topic but generic sections are skipped with *"Generic: the tutor could answer this on its own"*; off-topic ones are skipped as not relevant.
-4. **Approve a purchase:** ask about *"the midterm"*. The $0.008 solution set triggers **Buy it / Skip** (above the $0.005 approval threshold).
+4. **Approve a purchase:** on Earnings, set *"Ask me before any single purchase over"* to $0.002, then ask a question. Each purchase now shows **Buy it / Skip** first.
 5. **Study:** Study tab → quiz or flashcards on a topic. Sections you already bought are reused for free.
 6. **Be an author:** Upload → type a guide, or photograph handwritten pages (photo beside the transcription, a "Handwritten" badge once published). Earnings show in dollars on Home and Earnings.
 7. **Cash out:** Earnings → *Use for tutoring*, or *Advanced → Send to a crypto wallet → Arc*. The confirm screen shows fees and what arrives; the cash-out gets a **Confirmed** badge once QuickNode sees its Memo event on Arc.

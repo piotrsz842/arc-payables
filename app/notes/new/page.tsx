@@ -76,6 +76,9 @@ export default async function NewNotePage({ searchParams }: { searchParams: Prom
           <li>Common mistakes and how to avoid them.</li>
           <li>Generic textbook facts earn little: the checker skips what any AI already knows.</li>
         </ul>
+        <div className="border-t border-black/5 pt-3 text-black/60">
+          <span className="font-semibold text-ink">How prices work.</span> We set them, the same way for everyone: base $0.002 × length (×1.0 to ×1.5, up to 300 words) × your rating (×0.5 to ×3.3). A 300-word section from a new author: Base $0.002 · length ×1.5 · rating ×1.0 = $0.0030 per section. Prices rise as students rate your guides helpful.
+        </div>
       </div>
     </div>
   );

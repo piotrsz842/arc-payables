@@ -19,6 +19,7 @@ export type CurrentUser = {
   walletId: string;
   walletAddress: string;
   freeQuestionsLeft: number;
+  approvalThresholdUsd: string; // "ask me before any single purchase over $X"
 };
 
 /** The logged-in user, or null if nobody is logged in. */
@@ -38,6 +39,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     walletId: p.wallet_id,
     walletAddress: p.wallet_address,
     freeQuestionsLeft: p.free_questions_left,
+    approvalThresholdUsd: String(p.approval_threshold_usd ?? "0.005"), // default until migration 008 runs
   };
 }
 

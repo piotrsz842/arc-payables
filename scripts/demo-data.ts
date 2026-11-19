@@ -8,7 +8,6 @@ export type DemoSnippet = {
   title: string;
   course: string;
   summary: string;
-  priceUsd: string;
   content: string;
 };
 
@@ -18,7 +17,6 @@ export const DEMO_SNIPPETS: DemoSnippet[] = [
     title: "Big-O of common sorting algorithms",
     course: "CPSC 221",
     summary: "Best, average and worst-case running times of merge sort, quicksort, heapsort and insertion sort.",
-    priceUsd: "0.001",
     content:
       "Merge sort: O(n log n) always. Quicksort: O(n log n) average, O(n^2) worst. " +
       "Heapsort: O(n log n) always, not stable. Insertion sort: O(n^2), but O(n) on nearly-sorted input.",
@@ -29,7 +27,6 @@ export const DEMO_SNIPPETS: DemoSnippet[] = [
     title: "Supply and demand shifts",
     course: "ECON 101",
     summary: "How shifts in supply and demand curves move equilibrium price and quantity.",
-    priceUsd: "0.001",
     content: "A rightward shift in demand raises both equilibrium price and quantity...",
   },
   {
@@ -38,7 +35,6 @@ export const DEMO_SNIPPETS: DemoSnippet[] = [
     course: "CPSC 221",
     summary:
       "A worked example tracing CPSC 221's first-element-pivot quicksort on the sorted array [1..5], showing the n + (n-1) + ... sum, plus the quiz tip on median-of-three.",
-    priceUsd: "0.001",
     content:
       "Worked example (the way our lecture traces it): quicksort [1,2,3,4,5] with the FIRST element as pivot. " +
       "Pivot 1: left side empty, right side [2,3,4,5]. Pivot 2: right side [3,4,5]. Each partition removes only " +
@@ -53,7 +49,6 @@ export const DEMO_SNIPPETS: DemoSnippet[] = [
     course: "CPSC 221",
     summary:
       "Worked solutions to last term's midterm, including Q1: why quicksort hits O(n^2) on sorted input and how pivot choice fixes it.",
-    priceUsd: "0.008",
     content: "Q1 (sorting): quicksort degrades to O(n^2) when... [full worked solutions]",
   },
   {
@@ -62,7 +57,6 @@ export const DEMO_SNIPPETS: DemoSnippet[] = [
     title: "Light-dependent reactions of photosynthesis",
     course: "BIOL 112",
     summary: "How photosystems I and II turn light into ATP and NADPH in the thylakoid membrane.",
-    priceUsd: "0.001",
     content: "Photosystem II splits water, releasing O2...",
   },
 ];

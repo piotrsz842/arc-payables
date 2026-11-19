@@ -68,7 +68,7 @@ export type TutorEvent =
 export async function askTutor(opts: {
   db: SupabaseClient;
   baseUrl: string;
-  user: { id: string; freeQuestionsLeft: number };
+  user: { id: string; freeQuestionsLeft: number; approvalThresholdUsd?: string };
   question: string;
   askHuman: AskHuman;
   onEvent?: (event: TutorEvent) => void;
@@ -113,7 +113,7 @@ export async function askTutor(opts: {
       if (!preview) return JSON.stringify({ status: "error", message: "No snippet with that id." });
       if (preview.authorId === user.id) return JSON.stringify({ status: "blocked", reason: "That is the student's own note." });
       emit({ type: "checking", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, reason });
-      const outcome = await proposePurchase({ db, agent, baseUrl: opts.baseUrl, run, preview, reason, askHuman: opts.askHuman, meter, judge });
+      const outcome = await proposePurchase({ db, agent, baseUrl: opts.baseUrl, run, preview, reason, askHuman: opts.askHuman, meter, judge, approvalThresholdUsd: user.approvalThresholdUsd });
       if (outcome.paid) {
         const { data: author } = await db.from("profiles").select("display_name").eq("id", preview.authorId).single();
         emit({ type: "bought", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, authorName: author?.display_name ?? "a student" });

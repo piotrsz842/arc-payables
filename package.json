@@ -21,6 +21,8 @@
     "test-stream-webhook": "tsx --env-file=.env scripts/test-stream-webhook.ts",
     "screenshots": "tsx --env-file=.env scripts/screenshots.ts",
     "test-transcribe": "tsx --conditions=react-server --env-file=.env scripts/test-transcribe.ts",
+    "price-table": "tsx scripts/price-table.ts",
+    "reprice": "tsx --env-file=.env scripts/reprice.ts",
     "reports": "tsx --env-file=.env scripts/reports.ts",
     "payout": "tsx --conditions=react-server --env-file=.env scripts/payout.ts",
     "bridge-estimate": "tsx --env-file=.env scripts/bridge-estimate.ts",

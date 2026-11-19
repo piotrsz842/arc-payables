@@ -6,7 +6,8 @@
  * Without a file it uses a tiny built-in TEST sample (not real demo content).
  */
 import { readFileSync } from "node:fs";
-import { describeChunks, priceFor, splitNote } from "../lib/notes.js";
+import { describeChunks, splitNote } from "../lib/notes.js";
+import { priceSection, wordCount } from "../lib/pricing.js";
 
 const SAMPLE = `# Quicksort
 Quicksort picks a pivot, partitions the array into smaller and larger elements, and recurses on both sides.
@@ -26,7 +27,7 @@ const chunks = splitNote(body);
 console.log(`${chunks.length} snippets\n`);
 const previews = await describeChunks("CPSC 221", "Sorting", chunks);
 chunks.forEach((c, i) => {
-  console.log(`#${i + 1}  $${priceFor(c)}  ${previews[i].title}`);
+  console.log(`#${i + 1}  $${priceSection(wordCount(c)).usd}  ${previews[i].title}`);
   console.log(`    ${previews[i].summary}`);
   console.log(`    (${c.split(/\s+/).length} words: "${c.slice(0, 60).replace(/\n/g, " ")}…")\n`);
 });

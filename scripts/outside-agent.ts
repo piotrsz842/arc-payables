@@ -20,7 +20,7 @@ import type { Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 const SITE = process.env.OUTSIDE_AGENT_SITE ?? "https://arc-payables-chi.vercel.app";
-const MAX_PRICE_USD = 0.005; // this agent's own spending rule: it decides for itself what is worth buying
+const MAX_PRICE_USD = 0.01; // this agent's own spending rule: it decides for itself what is worth buying
 
 function setup() {
   if (process.env.OUTSIDE_AGENT_PRIVATE_KEY) throw new Error("OUTSIDE_AGENT_PRIVATE_KEY is already set in .env.");

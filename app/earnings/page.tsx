@@ -5,7 +5,8 @@ import { toUsd, totalsFor } from "@/lib/ledger";
 import { cashableOf, DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
 import { db } from "@/lib/supabase/admin";
 import { TOP_UP_AMOUNTS } from "@/lib/topup";
-import { topUpAction } from "../actions";
+import { setApprovalThresholdAction, topUpAction } from "../actions";
+import { APPROVAL_CHOICES } from "@/lib/pricing";
 import { SubmitButton } from "../submit-button";
 import { Notice, usd } from "../ui/notice";
 import { CashOutSheet } from "./cash-out-sheet";
@@ -29,9 +30,9 @@ const STATUS: Record<PayoutDetail["status"], string> = {
   failed: "Failed, money returned",
 };
 
-export default async function EarningsPage({ searchParams }: { searchParams: Promise<{ topup?: string; cashout?: string; cashout_error?: string }> }) {
+export default async function EarningsPage({ searchParams }: { searchParams: Promise<{ topup?: string; cashout?: string; cashout_error?: string; setting?: string }> }) {
   const user = await requireUser();
-  const { topup, cashout, cashout_error } = await searchParams;
+  const { topup, cashout, cashout_error, setting } = await searchParams;
   const totals = await totalsFor(db, user.id);
   const payouts = await listPayouts(db, user.id);
   const { data: sales } = await db
@@ -60,6 +61,8 @@ export default async function EarningsPage({ searchParams }: { searchParams: Pro
       {topup && TOPUP[topup] && <Notice kind={TOPUP[topup][0]}>{TOPUP[topup][1]}</Notice>}
       {cashout && CASHOUT[cashout] && <Notice kind={CASHOUT[cashout][0]}>{CASHOUT[cashout][1]}</Notice>}
       {cashout_error && <Notice kind="error">{cashout_error}</Notice>}
+      {setting === "saved" && <Notice>Approval setting saved.</Notice>}
+      {setting === "failed" && <Notice kind="error">Couldn't save that setting. Please try again.</Notice>}
 
       <section className="grid grid-cols-3 gap-3">
         <Stat label="Earned" value={usd(toUsd(totals.earnings))} hint="from your study guides" />
@@ -129,6 +132,22 @@ export default async function EarningsPage({ searchParams }: { searchParams: Pro
           </ul>
         </section>
       )}
+
+      <section id="approval" className="card space-y-3 p-5">
+        <h2 className="text-lg font-bold">Purchase approvals</h2>
+        <p className="text-sm text-black/55">The tutor pays for study guides on its own, but stops and asks you first above this amount.</p>
+        <form action={setApprovalThresholdAction} className="space-y-3">
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">Ask me before any single purchase over</span>
+            <select name="approval" defaultValue={String(Number(user.approvalThresholdUsd))} className="field max-w-60">
+              {APPROVAL_CHOICES.map((c) => (
+                <option key={c} value={String(Number(c))}>{c === "0.01" ? "$0.01 (never ask)" : usd(c)}</option>
+              ))}
+            </select>
+          </label>
+          <SubmitButton pendingText="Saving…" className="btn-secondary">Save</SubmitButton>
+        </form>
+      </section>
 
       <section className="card space-y-3 p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold"><Plus size={18} aria-hidden /> Add money</h2>

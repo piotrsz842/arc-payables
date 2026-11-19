@@ -6,7 +6,6 @@
  *   Author: Maya Chen
  *   Course: CPSC 221
  *   Title: Hash tables and hashing
- *   Price: 0.008          ← optional: a fixed price per section ("premium" note)
  *   ---
  *   # First topic
  *   ...
@@ -47,7 +46,8 @@ if (notes.length === 0) throw new Error(`No .md or .txt files in ${DIR}/`);
 
 for (const n of notes) {
   const sections = splitNote(n.body);
-  console.log(`${n.file}: ${n.author} · ${n.course} · "${n.title}" · ${sections.length} sections${n.price ? ` · fixed price $${n.price}` : ""}`);
+  if (n.price) console.log(`${n.file}: "Price:" is ignored. The platform sets prices (lib/pricing.ts).`);
+  console.log(`${n.file}: ${n.author} · ${n.course} · "${n.title}" · ${sections.length} sections`);
 }
 if (dry) process.exit(0);
 
@@ -89,7 +89,7 @@ for (const n of notes) {
     console.log(`Skipped "${n.title}" (already there)`);
     continue;
   }
-  const { sections } = await saveNote(db, { authorId, course: n.course, title: n.title, body: n.body, priceUsd: n.price, ownWorkConfirmed: true }) // the user wrote these themselves;
+  const { sections } = await saveNote(db, { authorId, course: n.course, title: n.title, body: n.body, ownWorkConfirmed: true }) // the user wrote these themselves;
   console.log(`Saved "${n.title}" by ${n.author}: ${sections} sections`);
 }
 console.log(`\nDone. Author logins: <name>@example.com, password = DEMO_PASSWORD in .env.`);

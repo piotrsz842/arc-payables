@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { CashOutError, cashOut, isDestination } from "@/lib/payouts";
+import { APPROVAL_CHOICES } from "@/lib/pricing";
 import { NotEnoughFundsError, topUp } from "@/lib/topup";
 
 export async function topUpAction(formData: FormData) {
@@ -33,4 +34,14 @@ export async function cashOutAction(formData: FormData) {
     outcome = `cashout_error=${encodeURIComponent(message)}`;
   }
   redirect(`/earnings?${outcome}`);
+}
+
+/** The student's "ask me before any single purchase over $X" setting. */
+export async function setApprovalThresholdAction(formData: FormData) {
+  const user = await requireUser();
+  const value = String(formData.get("approval") ?? "");
+  if (!APPROVAL_CHOICES.includes(value)) redirect("/earnings");
+  const { error } = await db.from("profiles").update({ approval_threshold_usd: value }).eq("id", user.id);
+  if (error) console.error("Could not save approval setting:", error.message);
+  redirect(error ? "/earnings?setting=failed" : "/earnings?setting=saved#approval");
 }

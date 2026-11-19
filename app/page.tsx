@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { authorRatings } from "@/lib/integrity";
 import { toMicro, toUsd, totalsFor } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
+import { EARN_MORE, ratingFactor } from "@/lib/pricing";
 import { Landing } from "./ui/landing";
 import { Notice, usd } from "./ui/notice";
 
@@ -51,6 +52,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           {user.freeQuestionsLeft > 0
             ? `${user.freeQuestionsLeft} free question${user.freeQuestionsLeft === 1 ? "" : "s"} left`
             : `Questions use your balance (${usd(toUsd(totals.balance))}), at most $0.01 each`}
+          {" · "}Asks you before any purchase over {usd(user.approvalThresholdUsd)}{" "}
+          <Link href="/earnings#approval" className="font-medium text-brand-700">Change</Link>
         </p>
       </section>
 
@@ -81,6 +84,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
             </span>
           )}
         </div>
+        {(notes ?? []).length > 0 && (
+          <p className="text-sm text-black/55">
+            Your prices: base $0.002 × length × your rating (×{ratingFactor(myRating?.up ?? 0, myRating?.down ?? 0).toFixed(1)}). {EARN_MORE}
+          </p>
+        )}
         {(notes ?? []).length === 0 ? (
           <Link href="/notes/new" className="card flex items-center gap-4 p-5 hover:border-brand-200">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><Sparkles size={20} aria-hidden /></span>

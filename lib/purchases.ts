@@ -83,6 +83,7 @@ export async function proposePurchase(opts: {
   askHuman: AskHuman;
   meter?: UsageMeter;
   judge?: QuestionJudge; // shared per question: one judge call covers all candidates
+  approvalThresholdUsd?: string; // the student's "ask me before any purchase over $X"
 }): Promise<Outcome> {
   const { db, agent, run, preview, reason } = opts;
 
@@ -114,6 +115,7 @@ export async function proposePurchase(opts: {
         reason,
         priceUsd: preview.priceUsd,
         budget: { remainingUsd: toUsd(remaining), gatewayAvailableUsd: balances.gateway.formattedAvailable },
+        approvalThresholdUsd: opts.approvalThresholdUsd,
       },
       {
         proposedCount: rows.length,

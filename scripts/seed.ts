@@ -18,6 +18,7 @@ import type { Address } from "viem";
 import { BLOCKCHAIN, USDC_ADDRESS, usdcBalance } from "../lib/arc.js";
 import { circle, requireEnv, waitForTransaction } from "../lib/circle.js";
 import { createUserWallet } from "../lib/wallets.js";
+import { priceSection, wordCount } from "../lib/pricing.js";
 import { DEMO_SNIPPETS } from "./demo-data.js";
 
 const db = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("SUPABASE_SECRET_KEY"), {
@@ -89,7 +90,7 @@ for (const course of [...new Set(DEMO_SNIPPETS.map((s) => s.course))]) {
       title: s.title,
       summary: s.summary,
       content: s.content,
-      price_usd: s.priceUsd,
+      price_usd: priceSection(wordCount(s.content)).usd, // platform price, like every section
     })),
   );
   if (error) throw error;

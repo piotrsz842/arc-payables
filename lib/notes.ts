@@ -14,6 +14,8 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { embed, embeddingsEnabled, sectionText, toVector } from "./embeddings";
+import { authorRatings } from "./integrity";
+import { priceSection } from "./pricing";
 
 const TARGET_WORDS = 250;
 const MAX_SNIPPETS = 20;
@@ -47,11 +49,6 @@ export function splitNote(body: string): string[] {
   return merged.slice(0, MAX_SNIPPETS);
 }
 
-/** 3. Price: $0.001 per started 150 words, between $0.001 and $0.004. */
-export function priceFor(text: string): string {
-  const units = Math.min(4, Math.max(1, Math.ceil(wordCount(text) / 150)));
-  return (units / 1000).toFixed(3);
-}
 
 /** "cpsc  221" → "CPSC 221" so courses match. */
 export const normalizeCourse = (course: string) => course.trim().replace(/\s+/g, " ").toUpperCase();
@@ -104,13 +101,11 @@ export async function describeChunks(course: string, noteTitle: string, chunks: 
 /** Save a note and its snippets. Returns how many snippets were created. */
 export async function saveNote(
   db: SupabaseClient,
-  // priceUsd: optional fixed price for every section (seeded "premium" notes); otherwise priced by length.
-  note: { authorId: string; course: string; title: string; body: string; idPrefix?: string; priceUsd?: string; ownWorkConfirmed?: boolean; handwritten?: boolean; imagePaths?: string[] },
+  // Prices are set by the platform (lib/pricing.ts): authors can't choose them.
+  note: { authorId: string; course: string; title: string; body: string; idPrefix?: string; ownWorkConfirmed?: boolean; handwritten?: boolean; imagePaths?: string[] },
 ): Promise<{ noteId: string; sections: number }> {
   const course = normalizeCourse(note.course);
-  if (note.priceUsd !== undefined && !(Number(note.priceUsd) >= 0.001 && Number(note.priceUsd) <= 0.01)) {
-    throw new Error("A fixed price must be between $0.001 and $0.01 (the tutor's per-snippet cap).");
-  }
+  const rating = (await authorRatings(db)).get(note.authorId); // the author's current ratings set the price
   const chunks = splitNote(note.body);
   if (chunks.length === 0) throw new Error("The note is empty.");
   const previews = await describeChunks(course, note.title, chunks);
@@ -152,7 +147,7 @@ export async function saveNote(
     title: previews[i].title,
     summary: previews[i].summary,
     content,
-    price_usd: note.priceUsd ?? priceFor(content),
+    price_usd: priceSection(wordCount(content), rating).usd,
   }));
   const { data: inserted, error: snippetError } = await db.from("snippets").insert(rows).select("id, position");
   if (snippetError) {

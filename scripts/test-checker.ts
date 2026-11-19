@@ -46,16 +46,18 @@ for (const r of rules) {
 }
 
 // 2. How the judge's answer maps to a verdict (fake answers, no API).
-const mapping: { name: string; answer: Partial<RelevanceAnswer>; price?: string; expect: Verdict; rule: string }[] = [
+const mapping: { name: string; answer: Partial<RelevanceAnswer>; price?: string; askOver?: string; expect: Verdict; rule: string }[] = [
   { name: "on topic + course-specific", answer: {}, expect: "allow", rule: "all_checks_passed" },
   { name: "off topic", answer: { relevant: "no" }, expect: "block", rule: "relevance" },
   { name: "can't tell the topic", answer: { relevant: "unsure" }, expect: "ask_human", rule: "relevance" },
   { name: "on topic but generic", answer: { course_specific: "no" }, expect: "block", rule: "generic" },
-  { name: "relevant but pricey ($0.008)", answer: {}, price: "0.008", expect: "ask_human", rule: "approval_threshold" },
+  { name: "over the default $0.005 setting", answer: {}, price: "0.008", expect: "ask_human", rule: "approval_threshold" },
+  { name: "student set ask over $0.002", answer: {}, price: "0.003", askOver: "0.002", expect: "ask_human", rule: "approval_threshold" },
+  { name: "student set never ask ($0.01)", answer: {}, price: "0.008", askOver: "0.01", expect: "allow", rule: "all_checks_passed" },
 ];
 for (const m of mapping) {
   const judge = fakeJudge(m.answer);
-  const d = await checkPurchase("s1", { ...base, priceUsd: m.price ?? base.priceUsd }, fresh, { judge });
+  const d = await checkPurchase("s1", { ...base, priceUsd: m.price ?? base.priceUsd, approvalThresholdUsd: m.askOver }, fresh, { judge });
   report(d.verdict === m.expect && d.rule === m.rule, m.name, `${d.verdict} [${d.rule}]`);
 }
 

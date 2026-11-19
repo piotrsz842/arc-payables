@@ -12,6 +12,7 @@
  * tie-breaker between equally relevant sections.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { priceSection, wordCount } from "./pricing";
 
 export const REPORT_REASONS = {
   copies_course_materials: "Copies course materials (slides, handouts, lecture text)",
@@ -85,7 +86,23 @@ export async function rateAnswer(db: SupabaseClient, userId: string, runId: stri
   const { data: run } = await db.from("agent_runs").select("asked_by, status").eq("id", runId).single();
   if (!run || run.asked_by !== userId || run.status === "running") return false;
   const { error } = await db.from("answer_ratings").upsert({ run_id: runId, user_id: userId, rating });
-  return !error;
+  if (error) return false;
+  // Ratings move prices: re-price every author whose sections this answer used.
+  const { data: used } = await db.from("purchase_decisions").select("snippet_id").eq("run_id", runId).eq("paid", true);
+  const ids = (used ?? []).map((u) => u.snippet_id);
+  const { data: authors } = ids.length ? await db.from("snippets").select("author_id").in("id", ids) : { data: [] };
+  for (const a of new Set((authors ?? []).map((x) => x.author_id as string))) await repriceAuthor(db, a);
+  return true;
+}
+
+/** Set every section of one author to its current formula price (length × the author's rating). */
+export async function repriceAuthor(db: SupabaseClient, authorId: string) {
+  const rating = (await authorRatings(db)).get(authorId);
+  const { data: sections } = await db.from("snippets").select("id, content, price_usd").eq("author_id", authorId);
+  for (const s of sections ?? []) {
+    const price = priceSection(wordCount(s.content), rating).usd;
+    if (Number(price) !== Number(s.price_usd)) await db.from("snippets").update({ price_usd: price }).eq("id", s.id);
+  }
 }
 
 /** Author → { up, down } from ratings on answers that used their sections. */

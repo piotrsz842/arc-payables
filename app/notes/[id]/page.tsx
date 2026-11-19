@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { toMicro, toUsd } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
 import { Notice, usd } from "@/app/ui/notice";
+import { authorRatings } from "@/lib/integrity";
+import { EARN_MORE, explainPrice, priceSection, ratingFactor, wordCount } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function NotePage({
 
   const { data: snippets } = await db
     .from("snippets")
-    .select("id, position, title, summary, price_usd, flagged_at")
+    .select("id, position, title, summary, content, price_usd, flagged_at")
     .eq("note_id", id)
     .order("position");
   const ids = (snippets ?? []).map((s) => s.id);
@@ -40,6 +42,7 @@ export default async function NotePage({
     earned.set(s.snippet_id, (earned.get(s.snippet_id) ?? 0n) + toMicro(s.amount_usd));
   }
   const total = [...earned.values()].reduce((a, b) => a + b, 0n);
+  const rating = (await authorRatings(db)).get(user.id);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -65,6 +68,9 @@ export default async function NotePage({
 
       <section className="space-y-2">
         <h2 className="text-lg font-bold">What the tutor sees</h2>
+        <p className="text-sm text-black/55">
+          Your rating ×{ratingFactor(rating?.up ?? 0, rating?.down ?? 0).toFixed(1)}. {EARN_MORE}
+        </p>
         <p className="text-sm text-black/55">Only each section&apos;s title and one-line preview, for free. It pays to read the full section, and that goes to you.</p>
         <ul className="card divide-y divide-black/5">
           {(snippets ?? []).map((s) => (
@@ -75,7 +81,7 @@ export default async function NotePage({
               </div>
               <p className="text-black/60">{s.summary}</p>
               <div className="flex flex-wrap items-center gap-2 text-xs text-black/45">
-                <span>{usd(s.price_usd)} per use</span>·<span>{uses.get(s.id) ?? 0} {uses.get(s.id) === 1 ? "use" : "uses"}</span>
+                <span>{explainPrice(priceSection(wordCount(s.content), rating))}</span>·<span>{uses.get(s.id) ?? 0} {uses.get(s.id) === 1 ? "use" : "uses"}</span>
                 {s.flagged_at && !note.deleted_at && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">Off sale: reported, under review</span>}
               </div>
             </li>
