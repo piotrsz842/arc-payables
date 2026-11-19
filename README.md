@@ -243,14 +243,16 @@ Invented facts in study material are worse than a few cents per upload, and the 
 
 Open **https://arc-payables-chi.vercel.app** on a phone or laptop.
 
+The seeded course is **GGIS 204 (urban geography)**: study guides by Maya Chen (handwritten), Daniel Okafor, and Jordan Reyes, whose two guides exist to show the checker blocking (a plain glossary and an off-topic campsite guide that reuses the words "site" and "situation"). A CPSC 221 set from "Demo Notes" is there too.
+
 1. **Sign up** with any email: you get 3 free questions. No wallet setup, no crypto words.
-2. **Ask** (home screen or the Ask tab), for example *"CPSC 221: why does quicksort take O(n²) on sorted input?"*. Watch the summary chip ("Used 1 study guide · $0.003 · Skipped 1") and open **Details** to see each checker decision. The answer cites the study guide it used.
-3. **See a block:** on-topic but generic sections are skipped with *"Generic: the tutor could answer this on its own"*; off-topic ones are skipped as not relevant.
-4. **Approve a purchase:** on Earnings, set *"Ask me before any single purchase over"* to $0.002, then ask a question. Each purchase now shows **Buy it / Skip** first.
-5. **Study:** Study tab → quiz or flashcards on a topic. Sections you already bought are reused for free.
-6. **Be an author:** Upload → type a guide, or photograph handwritten pages (photo beside the transcription, a "Handwritten" badge once published). Earnings show in dollars on Home and Earnings.
-7. **Cash out:** Earnings → *Use for tutoring*, or *Advanced → Send to a crypto wallet → Arc*. The confirm screen shows fees and what arrives; the cash-out gets a **Confirmed** badge once QuickNode sees its Memo event on Arc.
-8. **Any agent can buy:** `npm run outside-agent -- buy "quicksort pivot" "CPSC 221"` buys a section over x402 with no account.
+2. **Ask:** *"What's the difference between site and situation? Give examples from class."* Open **Details**: the tutor buys Daniel's site-vs-situation section and cites his Chicago, New Orleans, Salem and Santa Barbara examples. The checker **blocks** the campsite guide (off-topic) and Jordan's glossary (*"Generic: the tutor could answer this on its own"*). The answer also flags a mistake in the notes (soil listed under "situation").
+3. **Ask again:** *"Why did cities like Chicago and New Orleans grow where they did?"* Daniel's section shows **"already yours, free"**: sections a student bought before are never paid for twice. Anything the notes don't cover is labelled general knowledge.
+4. **Study:** Study tab → quiz, course *GGIS 204*, topic *chapter 1 cities*. Every item names its source section; owned sections are reused free, new ones are checked and paid. The quiz never teaches a mistake in the notes as the right answer. Flashcards work the same way.
+5. **Approve a purchase:** on Earnings, set *"Ask me before any single purchase over"* to $0.001, then ask *"CPSC 221: why does quicksort take O(n²) on sorted input?"*. Each purchase shows **Buy it / Skip** first; *Skip* shows "You said no."
+6. **Be an author:** Upload → type a guide, upload a .docx/.pdf, or photograph handwritten pages (photo beside the transcription; Maya's guide carries the "Handwritten" badge). Earnings show in dollars on Home and Earnings.
+7. **Any agent can buy:** `npm run outside-agent -- buy "urbanization trends city models" "GGIS 204"` buys a section over x402 with no account; the author is credited.
+8. **Cash out:** as an author, Earnings → *Use for tutoring*, or *Advanced → Send to a crypto wallet → Arc*. The confirm screen shows fees and what arrives; the cash-out gets a **Confirmed** badge once QuickNode sees its Memo event on Arc.
 9. **On-chain proof:** every receipt and cash-out has a *Details* toggle with Gateway transfer IDs and Arc explorer links; the tutor's identity is ERC-8004 agent #897944 ([/agent.json](https://arc-payables-chi.vercel.app/agent.json)).
 
 ## What's next
