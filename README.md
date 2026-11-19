@@ -84,6 +84,7 @@ How we keep it down:
 **Who pays:** the platform's fee per purchase (see What's next) covers model cost. On Haiku that's about a tenth of a cent per question; on Opus, a few cents. Test runs mock the AI (`npm run test-checker` uses a fake judge); real-model checks are opt-in (`-- --live`).
 
 ## What's next
+- **Deeper QuickNode use:** route all Arc reads and writes through a QuickNode RPC endpoint, and add a second Stream that watches Circle Gateway batch settlements to the platform, so each sale is marked "settled on Arc" on the author's dashboard.
 - **Bank payouts** through an off-ramp partner: authors cash out to a bank account in dollars. The cash-out screen already shows the option as "coming soon". Today authors can spend earnings on tutoring or send them to a crypto wallet.
 - **Smart model routing:** answer most questions with Haiku and route hard ones (multi-step proofs, long derivations, low checker confidence) to a stronger model.
 - **Professor opt-in per course:** an instructor approves their course on the platform, can request removals directly, and can take a revenue share. This turns "students selling notes" into a course-sanctioned resource.
