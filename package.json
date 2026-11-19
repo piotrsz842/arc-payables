@@ -23,6 +23,7 @@
     "test-transcribe": "tsx --conditions=react-server --env-file=.env scripts/test-transcribe.ts",
     "price-table": "tsx scripts/price-table.ts",
     "reprice": "tsx --env-file=.env scripts/reprice.ts",
+    "test-docx": "tsx --conditions=react-server scripts/test-docx.ts",
     "reports": "tsx --env-file=.env scripts/reports.ts",
     "payout": "tsx --conditions=react-server --env-file=.env scripts/payout.ts",
     "bridge-estimate": "tsx --env-file=.env scripts/bridge-estimate.ts",

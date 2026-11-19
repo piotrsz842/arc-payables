@@ -27,6 +27,7 @@ Exam tip: …
  */
 export function UploadForm() {
   const [body, setBody] = useState("");
+  const [title, setTitle] = useState("");
   const [sections, setSections] = useState<Section[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export function UploadForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "We couldn't read that file.");
       setBody(data.text);
+      if (data.title && !title.trim()) setTitle(data.title); // the document's own Title
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -80,7 +82,7 @@ export function UploadForm() {
         </label>
         <label className="block text-sm">
           <span className="mb-1 block font-medium">Title</span>
-          <input name="title" placeholder="Sorting algorithms" required className="field" />
+          <input name="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sorting algorithms" required className="field" />
         </label>
       </div>
 
