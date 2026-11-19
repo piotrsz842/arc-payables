@@ -42,7 +42,7 @@ Design rule: **the AI may judge relevance, but code decides about money.**
 
 | Check (in order) | Decides | Why |
 |---|---|---|
-| Loop detection | block after 6 proposals per question, or re-proposing a blocked section; the run stops after 2 loop blocks | an agent that keeps proposing instead of answering is stuck or manipulated |
+| Loop detection | block after 6 proposals per question, or re-proposing a blocked section (the run is flagged `stopped_looping` after 2 loop blocks; the tool loop is also capped at 12 steps) | an agent that keeps proposing instead of answering is stuck or manipulated |
 | Duplicate | block | never pay twice in one question |
 | Price cap | block above **$0.01** per section | hard ceiling (also enforced by a hook inside the payment SDK) |
 | Question budget | block above the remaining **$0.01** per question (counting money already promised to parallel purchases) | the tutor can call tools in parallel; checks for one question run one at a time |
