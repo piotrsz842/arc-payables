@@ -15,7 +15,7 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getAgent } from "./agent-wallet";
-import { QuestionJudge } from "./checker";
+import { QuestionJudge, reuseBlockReason } from "./checker";
 import { recordPurchaseDiscipline } from "./erc8004";
 import { toUsd } from "./ledger";
 import { finishRun, ownedSnippetIds, proposePurchase } from "./purchases";
@@ -93,7 +93,10 @@ export async function createStudySet(opts: {
     const authorName = await nameOf(p.authorId);
     if (owned.has(p.id)) {
       const s = await getSnippetWithContent(db, p.id); // null if it was reported or deleted since
-      if (s) {
+      const blocked = s ? await reuseBlockReason(judge, p) : null; // free, but still only if on topic and course-specific
+      if (s && blocked) {
+        sources.push({ title: p.title, authorName, priceUsd: p.priceUsd, how: "skipped", why: blocked });
+      } else if (s) {
         texts.push({ title: s.title, content: s.content });
         sources.push({ title: p.title, authorName, priceUsd: p.priceUsd, how: "reused" });
       }

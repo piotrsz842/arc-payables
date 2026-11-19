@@ -213,6 +213,22 @@ const input = (q: string) => q.slice(0, 1000); // questions are capped at 2000 c
  * judges them all in one call the first time a purchase needs an answer.
  * Later proposals reuse those answers (no new call) unless they're new.
  */
+/**
+ * For a section the student already owns (no payment): is it still worth using
+ * for THIS question? Returns the block reason, or null to reuse it. If the judge
+ * can't run, reuse it: it's free and was checked when it was bought.
+ */
+export async function reuseBlockReason(judge: QuestionJudge, c: Candidate): Promise<string | null> {
+  try {
+    const r = await judge.judge(c);
+    if (r.relevant === "no") return r.explanation;
+    if (r.course_specific === "no") return `Generic: the tutor could answer this on its own. ${r.value_explanation}`;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export class QuestionJudge {
   private seen = new Map<string, Candidate>();
   private answers = new Map<string, RelevanceAnswer>();

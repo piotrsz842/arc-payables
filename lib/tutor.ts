@@ -16,7 +16,7 @@ import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getAgent } from "./agent-wallet";
-import { QuestionJudge } from "./checker";
+import { QuestionJudge, reuseBlockReason } from "./checker";
 import { UsageMeter } from "./usage";
 import { embed, embeddingsEnabled, toVector } from "./embeddings";
 import { recordPurchaseDiscipline } from "./erc8004";
@@ -120,6 +120,12 @@ export async function askTutor(opts: {
       if (owned.has(preview.id)) {
         // Already bought in an earlier question: reuse it, no checker, no payment.
         const s = await getSnippetWithContent(db, preview.id); // null if reported or deleted since
+        const blocked = s ? await reuseBlockReason(judge, preview) : null;
+        if (s && blocked) {
+          emit({ type: "checking", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, reason });
+          emit({ type: "not_bought", snippetId: preview.id, title: preview.title, why: blocked });
+          return JSON.stringify({ status: "blocked", reason: blocked });
+        }
         if (s) {
           const { data: author } = await db.from("profiles").select("display_name").eq("id", preview.authorId).single();
           emit({ type: "checking", snippetId: preview.id, title: preview.title, priceUsd: preview.priceUsd, reason });
