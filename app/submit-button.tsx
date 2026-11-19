@@ -10,7 +10,7 @@ import { useFormStatus } from "react-dom";
 export function SubmitButton({
   children,
   pendingText,
-  className = "rounded bg-slate-900 px-4 py-2 font-medium text-white",
+  className = "btn-primary",
   name,
   value,
 }: {

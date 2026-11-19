@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { toMicro, toUsd } from "@/lib/ledger";
 import { db } from "@/lib/supabase/admin";
+import { Notice, usd } from "@/app/ui/notice";
 
 export const dynamic = "force-dynamic";
 
-const money = (micro: bigint) => `$${Number(toUsd(micro)).toFixed(3)}`;
 
 /** One of the author's notes: how it was split, what the tutor sees, and what each part earned. */
 export default async function NotePage({
@@ -41,51 +41,47 @@ export default async function NotePage({
   const total = [...earned.values()].reduce((a, b) => a + b, 0n);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-5">
       {uploaded && (
-        <p className="rounded bg-green-50 p-3 text-sm text-green-800">
-          Uploaded! Your study guide was split into {snippets?.length ?? 0} {snippets?.length === 1 ? "section" : "sections"}. The tutor can now find them.
-        </p>
+        <Notice>
+          Uploaded. Your study guide became {snippets?.length ?? 0} {snippets?.length === 1 ? "section" : "sections"}, and the tutor can find them now.
+        </Notice>
       )}
-      <div>
-        <p className="text-sm text-slate-500">{note.course}</p>
-        <h1 className="text-2xl font-bold">{note.title}</h1>
-        <p className="text-sm text-slate-600">Earned so far: {money(total)}</p>
-        {note.deleted_at && (
-          <p className="mt-2 rounded bg-slate-100 p-2 text-sm">You deleted this study guide. It is no longer sold; what it earned stays yours.</p>
-        )}
+      {note.deleted_at && <Notice kind="info">You deleted this study guide. It's no longer sold; what it earned stays yours.</Notice>}
+      <div className="card flex items-end justify-between gap-4 p-5">
+        <div className="min-w-0">
+          <div className="text-xs font-semibold uppercase tracking-wide text-brand-700">{note.course}</div>
+          <h1 className="truncate text-2xl font-extrabold tracking-tight">{note.title}</h1>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="text-xs text-black/50">Earned</div>
+          <div className="text-2xl font-extrabold text-emerald-700">{usd(toUsd(total))}</div>
+        </div>
       </div>
 
       <section className="space-y-2">
-        <h2 className="font-semibold">What the tutor sees</h2>
-        <p className="text-sm text-slate-600">
-          The tutor only sees each section&apos;s title and one-line preview (free). It pays the price to read the full section, and that
-          money goes to you.
-        </p>
-        <ul className="divide-y rounded border bg-white">
+        <h2 className="text-lg font-bold">What the tutor sees</h2>
+        <p className="text-sm text-black/55">Only each section&apos;s title and one-line preview, for free. It pays to read the full section, and that goes to you.</p>
+        <ul className="card divide-y divide-black/5">
           {(snippets ?? []).map((s) => (
-            <li key={s.id} className="flex justify-between gap-4 p-3 text-sm">
-              <div>
-                <p className="font-medium">
-                  {s.title}
-                  {s.flagged_at && !note.deleted_at && <span className="ml-2 rounded bg-amber-100 px-1 text-xs text-amber-900">off sale: reported, under review</span>}
-                </p>
-                <p className="text-slate-500">{s.summary}</p>
+            <li key={s.id} className="space-y-1 p-4 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <span className="font-semibold">{s.title}</span>
+                <span className="shrink-0 font-semibold text-emerald-700">{usd(toUsd(earned.get(s.id) ?? 0n))}</span>
               </div>
-              <div className="shrink-0 text-right">
-                <p>${Number(s.price_usd).toFixed(3)} per use</p>
-                <p className="text-slate-500">
-                  {uses.get(s.id) ?? 0} {uses.get(s.id) === 1 ? "use" : "uses"} · {money(earned.get(s.id) ?? 0n)}
-                </p>
+              <p className="text-black/60">{s.summary}</p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-black/45">
+                <span>{usd(s.price_usd)} per use</span>·<span>{uses.get(s.id) ?? 0} {uses.get(s.id) === 1 ? "use" : "uses"}</span>
+                {s.flagged_at && !note.deleted_at && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">Off sale: reported, under review</span>}
               </div>
             </li>
           ))}
         </ul>
       </section>
 
-      <div className="flex gap-4 text-sm">
-        <Link href="/" className="underline">Back to your dashboard</Link>
-        {!note.deleted_at && <Link href={`/notes/${note.id}/delete`} className="text-red-700 underline">Delete this study guide</Link>}
+      <div className="flex items-center justify-between text-sm">
+        <Link href="/" className="font-medium text-black/60 hover:text-ink">← Home</Link>
+        {!note.deleted_at && <Link href={`/notes/${note.id}/delete`} className="font-medium text-red-700 hover:underline">Delete this study guide</Link>}
       </div>
     </div>
   );

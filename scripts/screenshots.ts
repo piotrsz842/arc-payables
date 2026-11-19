@@ -46,6 +46,9 @@ for (const [label, viewport] of Object.entries(sizes)) {
     ["ask", "/ask"],
     ["earnings", "/earnings"],
     ["study", "/study"],
+    ["upload", "/notes/new"],
+    ["note", process.env.SCREENSHOT_NOTE_PATH ?? "/"],
+    ["signup", "/signup"],
   ] as const) {
     await shoot(page, `${label}-${name}`, path);
   }
