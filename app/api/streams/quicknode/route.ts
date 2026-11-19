@@ -19,21 +19,30 @@ import { db } from "@/lib/supabase/admin";
 
 type Log = { address?: string; topics?: Hex[]; data?: Hex; transactionHash?: string; blockNumber?: string };
 
-function validSignature(req: Request, body: string): boolean {
+/** Why a request was rejected (or "ok"). Logged, never the secrets themselves. */
+function checkSignature(req: Request, body: string): string {
   const token = process.env.QUICKNODE_SECURITY_TOKEN;
   const nonce = req.headers.get("x-qn-nonce");
   const timestamp = req.headers.get("x-qn-timestamp");
   const given = req.headers.get("x-qn-signature");
-  if (!token || !nonce || !timestamp || !given) return false;
-  // Reject old messages (replays): QuickNode timestamps are unix seconds.
-  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 600) return false;
+  if (!token) return "QUICKNODE_SECURITY_TOKEN is not set on the server";
+  if (!nonce || !timestamp || !given) return `missing headers (nonce: ${!!nonce}, timestamp: ${!!timestamp}, signature: ${!!given})`;
+  // Reject old messages (replays). Accept unix seconds or milliseconds; the docs don't say which.
+  const t = Number(timestamp);
+  if (Number.isFinite(t)) {
+    const seconds = t > 1e12 ? t / 1000 : t;
+    if (Math.abs(Date.now() / 1000 - seconds) > 600) return `timestamp too old or in the future (${timestamp})`;
+  }
   const expected = createHmac("sha256", token).update(nonce + timestamp + body).digest("hex");
-  return expected.length === given.length && timingSafeEqual(Buffer.from(expected), Buffer.from(given));
+  const ok = expected.length === given.length && timingSafeEqual(Buffer.from(expected), Buffer.from(given.toLowerCase()));
+  return ok ? "ok" : `signature mismatch (body ${body.length} bytes, content-encoding: ${req.headers.get("content-encoding") ?? "none"})`;
 }
 
 export async function POST(req: Request) {
   const body = await req.text();
-  if (!validSignature(req, body)) return Response.json({ error: "bad signature" }, { status: 401 });
+  const verdict = checkSignature(req, body);
+  console.log(`[quicknode webhook] ${verdict}`); // visible in Vercel's function logs
+  if (verdict !== "ok") return Response.json({ error: "bad signature" }, { status: 401 });
 
   // Raw Logs payloads nest arrays (per block, per transaction), and a filter
   // can return its own shape: collect every object that looks like a log.
@@ -69,6 +78,7 @@ export async function POST(req: Request) {
     await db.from("ledger_entries").update({ detail }).eq("id", row.id);
     confirmed++;
   }
+  console.log(`[quicknode webhook] logs: ${logs.length}, cash-outs confirmed: ${confirmed}`);
   // Always 2xx once verified: QuickNode waits for an answer before sending the next block.
   return Response.json({ ok: true, logs: logs.length, confirmed });
 }
