@@ -51,7 +51,9 @@ export function splitNote(body: string): string[] {
 
 
 /** "cpsc  221" → "CPSC 221" so courses match. */
-export const normalizeCourse = (course: string) => course.trim().replace(/\s+/g, " ").toUpperCase();
+// "ggis204", "GGIS 204" and "GGIS  204" are the same course: upper case, one space between letters and number.
+export const normalizeCourse = (course: string) =>
+  course.trim().replace(/\s+/g, " ").toUpperCase().replace(/([A-Z])(\d)/g, "$1 $2");
 
 // --- 2. Previews written by Claude ---
 const PreviewsSchema = z.object({
