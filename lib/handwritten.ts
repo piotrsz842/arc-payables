@@ -4,7 +4,8 @@
  *   1. each photo is shrunk (sharp) to at most 1568 px on the long side,
  *      which is all the model uses anyway, so tokens stay low
  *   2. a quick brightness check flags dark photos
- *   3. Claude (Haiku 5.5 by default) transcribes the page and rates how
+ *   3. Claude (Opus 5.5 by default: on real handwriting Haiku guessed and
+ *      invented words, Opus marks them [unclear]) transcribes the page and rates how
  *      readable it is (blurry, dark, cut off, messy handwriting)
  *   4. the ORIGINAL photo is stored in a PRIVATE bucket; buyers only ever get
  *      the transcribed text (after the author checks and fixes it)
@@ -20,7 +21,7 @@ import { UsageMeter } from "./usage";
 export const BUCKET = "handwritten";
 export const MAX_PAGES = 6;
 export const MAX_BYTES = 12 * 1024 * 1024; // per photo, before shrinking
-export const TRANSCRIBE_MODEL = process.env.TRANSCRIBE_MODEL || "claude-haiku-5-5";
+export const TRANSCRIBE_MODEL = process.env.TRANSCRIBE_MODEL || "claude-opus-5-5";
 
 const PageSchema = z.object({
   text: z.string().describe("The page's text, transcribed faithfully as Markdown. Headings as #, lists as -, math in plain text."),

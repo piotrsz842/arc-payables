@@ -158,7 +158,7 @@ Paying students for their work only makes sense if what we sell is **their own w
 
 **Authors can delete their own study guides** (with a confirm step). Deleting is a *soft* delete that reuses the reports' remove-from-sale flag: the guide disappears from search, previews, the tutor and the x402 endpoint at once. Its rows stay, so past sales, earnings and cash-out history remain intact, and earnings already made can still be cashed out. **Content an AI agent already bought can't be taken back**, but it can't be sold again.
 
-**Handwritten study guides.** Authors can photograph handwritten pages (phone camera or files, up to 6 pages). Claude's vision model (Haiku 5.5 by default) transcribes each page and rates how readable it is; dark, blurry or cut-off pages get a warning. The author sees each photo next to its transcription and fixes it before publishing. The published text goes through exactly the same checks as a typed upload: own-work confirmation, near-duplicate check, sections and pricing. The original photos are stored in a **private** bucket, and buyers only ever get the text. Such guides carry a **"Handwritten" badge**: a signal of human authorship, not proof (anyone can copy a printout by hand).
+**Handwritten study guides.** Authors can photograph handwritten pages (phone camera or files, up to 6 pages). Claude's vision model (Opus 5.5 by default) transcribes each page and rates how readable it is; dark, blurry or cut-off pages get a warning. The author sees each photo next to its transcription and fixes it before publishing. The published text goes through exactly the same checks as a typed upload: own-work confirmation, near-duplicate check, sections and pricing. The original photos are stored in a **private** bucket, and buyers only ever get the text. Such guides carry a **"Handwritten" badge**: a signal of human authorship, not proof (anyone can copy a printout by hand).
 
 **Ratings.** After each answer the student can give a thumbs up or down. Ratings count toward the authors whose sections that answer used, appear on each author's dashboard, and break ties in search. Relevance always comes first.
 
@@ -204,6 +204,16 @@ How we keep it down:
 - **One checker call per question.** The checker (Claude Haiku 5.5) judges *all* candidate sections the tutor found, relevance and course-specific value together, in one call. It's reused for every purchase in that question. It sees only the question and the free previews, which also makes it harder to manipulate.
 - **Prompt caching** on the tutor's tool loop: each step re-reads the same instructions and history from cache at a fraction of the price.
 - **Capped outputs:** tutor 4,000 tokens per step, checker about 150 per candidate, upload previews about 200 per section.
+
+**Handwriting uses Opus 5.5 (a one-time cost per upload).** Tested on a real photo of handwritten notes:
+
+| | Haiku 5.5 | **Opus 5.5 (default)** |
+|---|---|---|
+| Cost per page | $0.0006 | **$0.0228** (at most ~$0.14 for a 6-page guide, once per upload) |
+| Hard-to-read words | guessed, and **invented facts** (wrong chapter, made-up country names, "5%" for "55%", "Edo/Tokyo" for "Beijing", "forts" for "food") | read correctly, or marked **[unclear]** for the author to fix |
+| Missing lines | dropped one | none |
+
+Invented facts in study material are worse than a few cents per upload, and the [unclear] marks show the author exactly what to correct. The model is a setting (`TRANSCRIBE_MODEL`). Questions, the checker and study sets stay on Haiku.
 
 **Why the tutor defaults to Haiku 5.5:** the hard part, knowing how *this* course teaches a topic, comes from the students' study guides the tutor buys, not from the model's own knowledge. Given those sections, Haiku writes a correct, cited answer built on the course's worked examples and exam tips for about 1/26 of Opus's cost (side-by-side in [`docs/tutor-model-comparison.md`](docs/tutor-model-comparison.md)). The model is a setting (`TUTOR_MODEL`). Routing harder questions automatically to a stronger model is listed under What's next.
 
