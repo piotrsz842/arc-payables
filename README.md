@@ -28,7 +28,7 @@ Built for the UBC 2026 Hackathon on **Arc testnet** (Circle's stablecoin L1). Li
 ```
 
 1. **Signup** creates a Circle developer-controlled wallet on Arc behind the scenes. The student never sees an address.
-2. **Upload:** a guide is split into sections at its headings. Claude writes a one-line preview for each, and the platform prices each section (see *Pricing*). A near-duplicate check (pgvector) rejects copies of existing sections and of past tutor answers.
+2. **Upload:** paste text, or upload a .docx, PDF, .txt or .md file (or photos of handwritten pages). A guide with `#` headings is split at its headings. One without headings (a Google Doc, a wall of text) is split into topics by Claude Haiku, which only picks *where* each topic starts, so every word stays the author's; the author reviews the sections before publishing. Claude writes a one-line preview for each, and the platform prices each section (see *Pricing*). A near-duplicate check (pgvector) rejects copies of existing sections and of past tutor answers.
 3. **Ask:** the tutor searches free previews (pgvector meaning search, filtered to the course first, plus keywords) and proposes sections to buy, each with a reason.
 4. **Checker:** plain-code rules run first. Only if they pass does one isolated Claude Haiku call judge relevance and course-specific value. The verdict is logged *before* any money moves.
 5. **Pay:** allowed sections are bought over **x402** with **Circle Gateway Nanopayments**. The author's ledger balance rises immediately, and Gateway settles the payments to the platform in batches on Arc.

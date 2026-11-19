@@ -1,9 +1,8 @@
 import { Camera, Lightbulb } from "lucide-react";
 import Link from "next/link";
-import { SubmitButton } from "@/app/submit-button";
 import { Notice } from "@/app/ui/notice";
 import { requireUser } from "@/lib/auth";
-import { uploadNote } from "./actions";
+import { UploadForm } from "./upload-form";
 
 const ERRORS: Record<string, string> = {
   missing: "Add a course, a title, and your study guide.",
@@ -13,15 +12,6 @@ const ERRORS: Record<string, string> = {
   duplicate: "Part of this study guide is almost identical to something already on the platform.",
 };
 
-const TEMPLATE = `# First topic
-Explain it the way you'd explain it to a classmate.
-
-Worked example: …
-
-Exam tip: …
-
-# Second topic
-…`;
 
 export default async function NewNotePage({ searchParams }: { searchParams: Promise<{ error?: string; detail?: string }> }) {
   await requireUser();
@@ -40,33 +30,7 @@ export default async function NewNotePage({ searchParams }: { searchParams: Prom
       </Link>
       {error && <Notice kind="error">{error === "duplicate" && detail ? detail : ERRORS[error]}</Notice>}
 
-      <form action={uploadNote} className="card space-y-4 p-5">
-        <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Course</span>
-            <input name="course" placeholder="CPSC 221" required className="field" />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Title</span>
-            <input name="title" placeholder="Sorting algorithms" required className="field" />
-          </label>
-        </div>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Your study guide</span>
-          <textarea name="body" rows={14} defaultValue="" placeholder={TEMPLATE} className="field font-mono text-sm" />
-          <span className="mt-1 block text-xs text-black/45">Start each topic with a # heading. Each one becomes a section the tutor can use.</span>
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">…or upload a .txt / .md file</span>
-          <input name="file" type="file" accept=".txt,.md,text/plain,text/markdown" className="block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700" />
-        </label>
-        <label className="flex items-start gap-3 rounded-xl bg-brand-50/60 p-3 text-sm">
-          <input name="own_work" type="checkbox" required className="mt-1 h-4 w-4 accent-[var(--color-brand-600)]" />
-          <span>This is my own work in my own words. It doesn&apos;t copy slides, handouts, or lecture text word for word, and isn&apos;t AI output.</span>
-        </label>
-        <SubmitButton pendingText="Splitting into sections, writing previews, checking for copies…" className="btn-primary w-full">Upload study guide</SubmitButton>
-        <p className="text-center text-xs text-black/45">Takes about 10–30 seconds.</p>
-      </form>
+      <UploadForm />
 
       <div className="card space-y-2 p-5 text-sm">
         <div className="flex items-center gap-2 font-semibold"><Lightbulb size={16} className="text-amber-600" aria-hidden /> What earns the most</div>
