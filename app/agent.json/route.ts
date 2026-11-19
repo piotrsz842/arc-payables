@@ -8,7 +8,7 @@ import { siteUrl } from "@/lib/site-url";
 export async function GET() {
   const base = await siteUrl();
   return Response.json({
-    name: "Notes by Students tutor",
+    name: "NoteWorth tutor",
     description:
       "An AI course tutor that buys short study-guide sections written by students, paying each author over x402 (Circle Gateway Nanopayments on Arc). A separate checker reviews every purchase before any money moves.",
     agent_type: "tutor",

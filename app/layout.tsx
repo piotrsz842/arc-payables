@@ -9,7 +9,7 @@ import "./globals.css";
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 
 export const metadata: Metadata = {
-  title: "Notes by Students",
+  title: "NoteWorth",
   description: "An AI tutor that learns your course from study guides students wrote, and pays them every time it uses one.",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#f7f5f1" };
@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
             <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-bold tracking-tight">
               <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand-600 text-sm text-white">N</span>
-              <span>Notes by Students</span>
+              <span>NoteWorth</span>
             </Link>
             {user ? (
               <>

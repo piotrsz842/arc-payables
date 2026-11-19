@@ -1,4 +1,4 @@
-# Notes by Students (working name)
+# NoteWorth
 
 Students write great notes and get nothing, while AI tutors don't know their specific course. **We pay students when an AI tutor uses their notes**, and the agent must justify every purchase before it spends.
 

@@ -1,4 +1,4 @@
-# CLAUDE.md — Notes by Students (`notes-by-students`, working name)
+# CLAUDE.md — NoteWorth (repo `notes-by-students`)
 
 ## Who I'm working with
 - Solo builder, CS freshman, still learning.
@@ -137,7 +137,7 @@ NEW WORK, priority order (drop from the bottom if short):
 - Study mode (5bfcd77): lib/study.ts createStudySet (startPaidRun → search course-first → reuse sections the student bought before for free → up to 4 new via proposePurchase (askHuman → "pending" = skip) → Haiku writes quiz (4 options, answer index, explanation, source) or flashcards from those sections only → chargeForRun → ERC-8004 feedback). /api/study, /study (quiz 5/10/20 with score; flashcards flip). Tested once: reused 1, bought 1, skipped generic + off-topic, $0.001 notes + $0.0009 AI.
 - Handwritten (built, needs migration 007 `notes.handwritten`, `notes.image_paths`): lib/handwritten.ts (sharp shrink to 1568 px, brightness check, private bucket "handwritten" auto-created, Claude vision transcription + legibility/issues; TRANSCRIBE_MODEL default Haiku). Haiku vs Opus on a rendered stand-in page: both word-perfect, $0.0003 vs $0.0104 (real-handwriting photo still to test: `npm run test-transcribe -- photo.jpg`). Browser shrinks photos + sends one page per request (Vercel 4.5 MB body limit). /notes/handwritten (photo beside editable text, warnings, own-work checkbox) → /api/handwritten/publish (paths must start with userId/) → saveNote({handwritten, imagePaths}) (columns only sent for handwritten, so typed uploads don't need 007). Badge on note page + home list.
 - QuickNode: still unconfirmed after the user switched to "Modify before streaming" + Logs + no compression (test PO-fd62af64ba). Webhook now logs `[quicknode webhook] <reason>` (no secrets) and accepts s or ms timestamps (a1390a7). Next step: user checks Vercel function logs for /api/streams/quicknode after a cash-out. Parked.
-- Open question to user: a catchier app name than "Notes by Students".
+- App name: **NoteWorth** (chosen by the user 2026-11-18; repo stays notes-by-students). Pitch line: "Your notes pay for your tutoring."
 
 Part B, extras, in order, each time-boxed 2 h:
 6. pgvector search on snippets, filtered by course first, combined with the keyword search.
