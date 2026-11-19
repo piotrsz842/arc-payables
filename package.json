@@ -37,7 +37,8 @@
     "ledger": "tsx --env-file=.env scripts/ledger-summary.ts",
     "cleanup-photos": "tsx --env-file=.env scripts/cleanup-photos.ts",
     "test-stop": "tsx --env-file=.env scripts/test-stop.ts",
-    "normalize-courses": "tsx --env-file=.env scripts/normalize-courses.ts"
+    "normalize-courses": "tsx --env-file=.env scripts/normalize-courses.ts",
+    "move-guide": "tsx --env-file=.env --conditions=react-server scripts/move-guide.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
