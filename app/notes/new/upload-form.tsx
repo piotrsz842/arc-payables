@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Pencil, Wand2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { SubmitButton, Spinner } from "@/app/submit-button";
 import { Notice } from "@/app/ui/notice";
@@ -152,7 +153,8 @@ export function UploadForm() {
           {sections || hasHeadings(body) ? "Publish study guide" : "Continue"}
         </SubmitButton>
       )}
-      <p className="text-center text-xs text-black/45">Publishing takes about 10–30 seconds.</p>
+      <Link href="/" className="btn-secondary w-full">Cancel</Link>
+      <p className="text-center text-xs text-black/45">Nothing is saved until you publish. Publishing takes about 10–30 seconds.</p>
     </form>
   );
 }

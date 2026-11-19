@@ -16,9 +16,9 @@ import type { HumanAnswer } from "./purchases";
 export const APPROVAL_WAIT_SECONDS = 120;
 
 /** Wait for the student's answer to one logged decision. "pending" = no answer in time. */
-export async function waitForHumanAnswer(db: SupabaseClient, logId: number): Promise<HumanAnswer> {
+export async function waitForHumanAnswer(db: SupabaseClient, logId: number, stopped: () => boolean = () => false): Promise<HumanAnswer> {
   const deadline = Date.now() + APPROVAL_WAIT_SECONDS * 1000;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && !stopped()) {
     const { data } = await db.from("purchase_decisions").select("human_decision").eq("id", logId).single();
     if (data?.human_decision === "approved" || data?.human_decision === "denied") return data.human_decision;
     await new Promise((r) => setTimeout(r, 1500));

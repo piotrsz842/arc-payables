@@ -53,7 +53,10 @@ export default async function ReportPage({
             <textarea name="details" rows={3} maxLength={1000} className="field mt-1" />
           </label>
           <p className="text-xs text-black/50">The section stops being sold right away, until a person reviews the report.</p>
-          <SubmitButton pendingText="Sending…" className="btn-primary">Send report</SubmitButton>
+          <div className="flex flex-wrap gap-2">
+            <SubmitButton pendingText="Sending…" className="btn-primary">Send report</SubmitButton>
+            <Link href="/" className="btn-secondary">Cancel</Link>
+          </div>
         </form>
       )}
     </div>

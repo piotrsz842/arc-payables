@@ -72,6 +72,8 @@ export async function askTutor(opts: {
   question: string;
   askHuman: AskHuman;
   onEvent?: (event: TutorEvent) => void;
+  /** True once the student pressed Stop (or left): no more purchases, and no charge. */
+  shouldStop?: () => boolean;
 }): Promise<TutorResult> {
   const { db, user, question } = opts;
   const emit = opts.onEvent ?? (() => {});
@@ -109,6 +111,7 @@ export async function askTutor(opts: {
       reason: z.string().describe("Why this snippet helps answer this specific question"),
     }),
     run: async ({ snippet_id, reason }) => {
+      if (opts.shouldStop?.()) return JSON.stringify({ status: "blocked", reason: "The student stopped this question. Don't buy anything else." });
       const preview = await getPreview(db, snippet_id);
       if (!preview) return JSON.stringify({ status: "error", message: "No snippet with that id." });
       if (preview.authorId === user.id) return JSON.stringify({ status: "blocked", reason: "That is the student's own note." });
@@ -155,6 +158,7 @@ export async function askTutor(opts: {
     for await (const message of runner) {
       meter.add("tutor step", TUTOR_MODEL, message.usage);
       final = message;
+      if (opts.shouldStop?.()) break; // stopped: don't start another step
     }
     if (!final) throw new Error("The tutor produced no message");
     answer =
@@ -170,8 +174,15 @@ export async function askTutor(opts: {
   emit({ type: "answer", text: answer });
 
   // 4. Charge the student (unless free) for what was actually bought, from the log.
+  //    Stopped questions are never charged: the platform covers anything bought before Stop,
+  //    and a free question is given back.
+  const stopped = !!opts.shouldStop?.();
+  if (stopped) {
+    answer = "Stopped. You weren't charged for this question.";
+    if (freeQuestion) await giveBackFreeQuestion(db, user.id);
+  }
   const spent = await spentInRun(db, run.id);
-  const charged = freeQuestion ? 0n : spent;
+  const charged = freeQuestion || stopped ? 0n : spent;
   if (charged > 0n) {
     await recordEntry(db, { userId: user.id, kind: "spend", amountUsd: toUsd(-charged), runId: run.id });
   }
@@ -231,6 +242,12 @@ export async function startPaidRun(db: SupabaseClient, user: { id: string; freeQ
   }
   const run = await startRun(db, { question, budgetUsd: toUsd(budget), askedBy: user.id, freeQuestion });
   return { run, freeQuestion, budget };
+}
+
+/** A stopped question or study set doesn't use up a free question. */
+export async function giveBackFreeQuestion(db: SupabaseClient, userId: string) {
+  const { data } = await db.from("profiles").select("free_questions_left").eq("id", userId).single();
+  if (data) await db.from("profiles").update({ free_questions_left: data.free_questions_left + 1 }).eq("id", userId);
 }
 
 /** Charge the student (unless it was free) for what was actually bought, from the log. */

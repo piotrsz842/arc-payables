@@ -20,7 +20,7 @@ import { recordPurchaseDiscipline } from "./erc8004";
 import { toUsd } from "./ledger";
 import { finishRun, proposePurchase } from "./purchases";
 import { getSnippetWithContent, searchPreviews } from "./snippets";
-import { chargeForRun, startPaidRun } from "./tutor";
+import { chargeForRun, giveBackFreeQuestion, startPaidRun } from "./tutor";
 import { UsageMeter } from "./usage";
 
 export type StudyKind = "quiz" | "flashcards";
@@ -43,6 +43,7 @@ const MAX_NEW_PURCHASES = 4; // new sections bought per set
 const MODEL = "claude-haiku-5-5";
 
 export class NothingToStudyError extends Error {}
+export class StudyCancelledError extends Error {}
 
 export async function createStudySet(opts: {
   db: SupabaseClient;
@@ -52,6 +53,8 @@ export async function createStudySet(opts: {
   topic: string;
   kind: StudyKind;
   count: number;
+  /** True once the student pressed Cancel (or left): no more purchases, and no charge. */
+  shouldStop?: () => boolean;
 }): Promise<StudySet> {
   const { db, user, kind } = opts;
   const topic = opts.topic.trim().slice(0, 200);
@@ -90,6 +93,7 @@ export async function createStudySet(opts: {
   const sources: StudySource[] = [];
   let bought = 0;
   for (const p of found) {
+    if (opts.shouldStop?.()) break;
     if (texts.length >= MAX_SECTIONS) break;
     const authorName = await nameOf(p.authorId);
     if (owned.has(p.id)) {
@@ -115,6 +119,13 @@ export async function createStudySet(opts: {
       const why = outcome.decision.verdict === "ask_human" ? "Needs your approval (pricey), skipped in study mode." : outcome.decision.reason;
       sources.push({ title: p.title, authorName, priceUsd: p.priceUsd, how: "skipped", why });
     }
+  }
+
+  // Cancelled: no charge (the platform covers anything already bought), free question given back.
+  if (opts.shouldStop?.()) {
+    if (freeQuestion) await giveBackFreeQuestion(db, user.id);
+    await finishRun(db, run.id, { status: "finished", answer: "Cancelled by the student.", chargedUsd: "0" });
+    throw new StudyCancelledError("Cancelled.");
   }
 
   if (texts.length === 0) {

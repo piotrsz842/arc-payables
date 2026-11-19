@@ -3,7 +3,7 @@
  */
 import { getCurrentUser } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
-import { createStudySet, NothingToStudyError } from "@/lib/study";
+import { createStudySet, NothingToStudyError, StudyCancelledError } from "@/lib/study";
 import { db } from "@/lib/supabase/admin";
 import { NeedsTopUpError } from "@/lib/tutor";
 
@@ -16,8 +16,12 @@ export async function POST(req: Request) {
   const kind = body?.kind === "flashcards" ? "flashcards" : "quiz";
   const topic = String(body?.topic ?? "").trim();
   if (!topic) return Response.json({ error: "Pick a topic first." }, { status: 400 });
+  // Cancel: the page aborts the request (or the student leaves).
+  let stopped = false;
+  req.signal.addEventListener("abort", () => (stopped = true));
   try {
     const set = await createStudySet({
+      shouldStop: () => stopped,
       db,
       baseUrl: await siteUrl(),
       user,
@@ -30,6 +34,7 @@ export async function POST(req: Request) {
   } catch (err) {
     if (err instanceof NeedsTopUpError) return Response.json({ error: "topup" }, { status: 402 });
     if (err instanceof NothingToStudyError) return Response.json({ error: err.message }, { status: 404 });
+    if (err instanceof StudyCancelledError) return Response.json({ error: "Cancelled. You weren't charged." }, { status: 499 });
     console.error("Study set failed:", err);
     return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }

@@ -79,3 +79,18 @@ export async function signedPhotoUrl(db: SupabaseClient, path: string): Promise<
   const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 60 * 30);
   return data?.signedUrl ?? null;
 }
+
+/**
+ * Throw away photos from an upload the author cancelled (or a page they removed).
+ * Only photos in the author's own folder, and never a photo that belongs to a
+ * published study guide.
+ */
+export async function discardPhotos(db: SupabaseClient, authorId: string, paths: string[]): Promise<number> {
+  const mine = [...new Set(paths)].filter((p) => typeof p === "string" && p.startsWith(`${authorId}/`) && !p.includes("..")).slice(0, MAX_PAGES * 2);
+  if (mine.length === 0) return 0;
+  const { data: used } = await db.from("notes").select("image_paths").overlaps("image_paths", mine);
+  const published = new Set((used ?? []).flatMap((n) => (n.image_paths as string[] | null) ?? []));
+  const unused = mine.filter((p) => !published.has(p));
+  if (unused.length) await db.storage.from(BUCKET).remove(unused);
+  return unused.length;
+}

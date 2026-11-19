@@ -3,7 +3,7 @@
 import { Ban, Check, Layers, ListChecks, RotateCcw, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/app/submit-button";
 import { Notice, usd } from "@/app/ui/notice";
 import type { StudyKind, StudySet } from "@/lib/study";
@@ -29,6 +29,9 @@ export function StudyClient({ freeLeft }: { freeLeft: number }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [set, setSet] = useState<StudySet | null>(null);
+  const abort = useRef<AbortController | null>(null);
+  // Leaving the page cancels a set that is still being made (no charge).
+  useEffect(() => () => abort.current?.abort(), []);
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
@@ -36,14 +39,18 @@ export function StudyClient({ freeLeft }: { freeLeft: number }) {
     setLoading(true);
     setError(null);
     setSet(null);
+    const controller = new AbortController();
+    abort.current = controller;
     try {
-      const res = await fetch("/api/study", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course, topic, kind, count }) });
+      const res = await fetch("/api/study", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course, topic, kind, count }), signal: controller.signal });
       const body = await res.json();
       if (!res.ok) setError(body.error === "topup" ? "topup" : body.error ?? "Something went wrong.");
       else setSet(body as StudySet);
     } catch {
-      setError("Something went wrong. Please try again.");
+      // Cancel pressed: the server stops buying and charges nothing.
+      setError(controller.signal.aborted ? "Cancelled. You weren't charged." : "Something went wrong. Please try again.");
     } finally {
+      abort.current = null;
       setLoading(false);
       router.refresh();
     }
@@ -100,6 +107,7 @@ export function StudyClient({ freeLeft }: { freeLeft: number }) {
             ))}
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
         <button disabled={loading} className="btn-primary w-full sm:w-auto">
           {loading ? (
             <>
@@ -111,6 +119,16 @@ export function StudyClient({ freeLeft }: { freeLeft: number }) {
             </>
           )}
         </button>
+        {loading ? (
+          <button type="button" onClick={() => abort.current?.abort()} className="btn-secondary w-full sm:w-auto">
+            Cancel
+          </button>
+        ) : (
+          <Link href="/" className="btn-secondary w-full sm:w-auto">
+            Cancel
+          </Link>
+        )}
+        </div>
         <p className="text-xs text-black/45">
           Uses {freeLeft > 0 ? "one of your free questions" : "your balance (at most $0.01)"}. Study guides you already bought are reused for free; new
           ones are checked first, then paid to their authors.
@@ -122,7 +140,7 @@ export function StudyClient({ freeLeft }: { freeLeft: number }) {
           You&apos;ve used your free questions and your balance is empty. <Link href="/earnings" className="font-semibold underline">Add money</Link>.
         </Notice>
       ) : (
-        error && <Notice kind="error">{error}</Notice>
+        error && <Notice kind={error.startsWith("Cancelled") ? "info" : "error"}>{error}</Notice>
       )}
     </form>
   );
@@ -135,9 +153,14 @@ function StudySetView({ set, onRestart }: { set: StudySet; onRestart: () => void
         <h2 className="text-xl font-bold">
           {set.kind === "quiz" ? "Quiz" : "Flashcards"}: {set.topic}
         </h2>
-        <button onClick={onRestart} className="btn-secondary px-3 py-2">
-          <RotateCcw size={16} aria-hidden /> New set
-        </button>
+        <div className="flex gap-2">
+          <button onClick={onRestart} className="btn-secondary px-3 py-2">
+            <RotateCcw size={16} aria-hidden /> New set
+          </button>
+          <Link href="/" className="btn-secondary px-3 py-2">
+            <X size={16} aria-hidden /> Quit
+          </Link>
+        </div>
       </div>
       {set.quiz && <Quiz items={set.quiz} />}
       {set.cards && <Cards cards={set.cards} />}

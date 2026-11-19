@@ -21,6 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <input name="password" type="password" required autoComplete="current-password" className="field" />
       </label>
       <SubmitButton pendingText="Signing in…" className="btn-primary w-full">Sign in</SubmitButton>
+      <Link href="/" className="btn-secondary w-full">Cancel</Link>
       <p className="text-center text-sm text-black/55">
         New here? <Link href="/signup" className="font-semibold text-brand-700">Create an account</Link>
       </p>

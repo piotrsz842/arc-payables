@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertTriangle, Camera, Check, PenLine } from "lucide-react";
+import { AlertTriangle, Camera, Check, PenLine, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/app/submit-button";
 import { Notice } from "@/app/ui/notice";
 
@@ -39,6 +39,44 @@ export function HandwrittenClient() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Photos already in storage but not published yet. If the author cancels or
+  // leaves, we ask the server to delete them (sendBeacon still works while the
+  // page closes). Anything that slips through: npm run cleanup-photos.
+  const unpublished = useRef<string[]>([]);
+  useEffect(() => {
+    unpublished.current = pages.map((p) => p.path);
+  }, [pages]);
+  useEffect(() => {
+    const discardOnLeave = () => {
+      if (unpublished.current.length === 0) return;
+      navigator.sendBeacon("/api/handwritten/discard", new Blob([JSON.stringify({ paths: unpublished.current })], { type: "application/json" }));
+      unpublished.current = [];
+    };
+    window.addEventListener("pagehide", discardOnLeave);
+    return () => {
+      window.removeEventListener("pagehide", discardOnLeave);
+      discardOnLeave(); // left through a link inside the app
+    };
+  }, []);
+
+  async function discard(paths: string[]) {
+    if (paths.length === 0) return;
+    await fetch("/api/handwritten/discard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paths }) }).catch(() => {});
+  }
+
+  async function removePage(path: string) {
+    setPages((all) => all.filter((p) => p.path !== path));
+    await discard([path]);
+  }
+
+  async function cancel() {
+    const paths = pages.map((p) => p.path);
+    unpublished.current = [];
+    setPages([]);
+    await discard(paths);
+    router.push("/notes/new");
+  }
+
   async function addPhotos(files: FileList | null) {
     if (!files?.length) return;
     setError(null);
@@ -72,6 +110,7 @@ export function HandwrittenClient() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Something went wrong.");
+      unpublished.current = []; // published: the photos now belong to the study guide
       router.push(`/notes/${body.noteId}?uploaded=1`);
     } catch (e) {
       setError((e as Error).message);
@@ -100,6 +139,11 @@ export function HandwrittenClient() {
             <input type="file" accept="image/*" capture="environment" multiple className="sr-only" onChange={(e) => addPhotos(e.target.files)} />
           </label>
         )}
+        {pages.length === 0 && !reading && (
+          <button type="button" onClick={() => router.push("/notes/new")} className="btn-secondary w-full sm:w-auto">
+            Cancel
+          </button>
+        )}
       </div>
 
       {error && <Notice kind="error">{error}</Notice>}
@@ -109,7 +153,12 @@ export function HandwrittenClient() {
         return (
           <div key={p.path} className="card space-y-3 p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold">Page {i + 1}</span>
+              <span className="flex items-center gap-2">
+                <span className="font-semibold">Page {i + 1}</span>
+                <button type="button" onClick={() => removePage(p.path)} disabled={publishing} className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs text-black/50 hover:bg-red-50 hover:text-red-700">
+                  <Trash2 size={13} aria-hidden /> Remove page
+                </button>
+              </span>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.legibility === "good" ? "bg-emerald-50 text-emerald-700" : p.legibility === "fair" ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700"}`}>
                 {p.legibility === "good" ? "Easy to read" : p.legibility === "fair" ? "Partly readable" : "Hard to read"}
               </span>
@@ -144,6 +193,9 @@ export function HandwrittenClient() {
           </label>
           <button onClick={publish} disabled={publishing || !!reading} className="btn-primary w-full">
             {publishing ? <><Spinner /> Splitting into sections, writing previews, checking for copies…</> : <><Check size={16} aria-hidden /> Publish study guide</>}
+          </button>
+          <button type="button" onClick={cancel} disabled={publishing} className="btn-secondary w-full">
+            Cancel and delete these photos
           </button>
           <p className="text-center text-xs text-black/45">Your photos stay private. The tutor only ever gets the text above.</p>
         </div>

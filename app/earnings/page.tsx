@@ -5,7 +5,8 @@ import { toUsd, totalsFor } from "@/lib/ledger";
 import { cashableOf, DESTINATIONS, listPayouts, type PayoutDetail } from "@/lib/payouts";
 import { db } from "@/lib/supabase/admin";
 import { TOP_UP_AMOUNTS } from "@/lib/topup";
-import { setApprovalThresholdAction, topUpAction } from "../actions";
+import { setApprovalThresholdAction } from "../actions";
+import { TopUp } from "./top-up";
 import { APPROVAL_CHOICES } from "@/lib/pricing";
 import { SubmitButton } from "../submit-button";
 import { Notice, usd } from "../ui/notice";
@@ -145,18 +146,17 @@ export default async function EarningsPage({ searchParams }: { searchParams: Pro
               ))}
             </select>
           </label>
-          <SubmitButton pendingText="Saving…" className="btn-secondary">Save</SubmitButton>
+          <div className="flex gap-2">
+            <SubmitButton pendingText="Saving…" className="btn-secondary">Save</SubmitButton>
+            <button type="reset" className="btn-secondary">Cancel</button>
+          </div>
         </form>
       </section>
 
       <section className="card space-y-3 p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold"><Plus size={18} aria-hidden /> Add money</h2>
         <p className="text-sm text-black/55">For more questions after your free ones. Each question costs at most $0.01.</p>
-        <form action={topUpAction} className="flex flex-wrap gap-2">
-          {TOP_UP_AMOUNTS.map((a) => (
-            <SubmitButton key={a} name="amount" value={a} pendingText="Adding…" className="btn-secondary">Add {usd(a)}</SubmitButton>
-          ))}
-        </form>
+        <TopUp amounts={TOP_UP_AMOUNTS} />
         <details className="text-xs text-black/50">
           <summary className="cursor-pointer">Account details</summary>
           <p className="mt-1">

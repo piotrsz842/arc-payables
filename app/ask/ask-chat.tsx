@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Ban, Check, Search, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ArrowUp, Ban, Check, Search, Square, ThumbsDown, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -34,6 +34,8 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
   const [answer, setAnswer] = useState<string | null>(null);
   const [done, setDone] = useState<Extract<TutorEvent, { type: "done" }> | null>(null);
   const [error, setError] = useState<"topup" | "failed" | null>(null);
+  const [stopped, setStopped] = useState(false);
+  const abort = useRef<AbortController | null>(null);
   const [asked, setAsked] = useState("");
 
   // Change the last "note" step for this snippet (or this approval).
@@ -88,8 +90,11 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
     setAnswer(null);
     setDone(null);
     setError(null);
+    setStopped(false);
+    const controller = new AbortController();
+    abort.current = controller;
     try {
-      const res = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+      const res = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }), signal: controller.signal });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       // Read the stream line by line: each line is one event.
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -103,8 +108,11 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
         for (const line of lines) if (line.trim()) handle(JSON.parse(line) as StreamEvent);
       }
     } catch {
-      setError("failed");
+      // Stop pressed: the server sees the request end, buys nothing more and charges nothing.
+      if (controller.signal.aborted) setStopped(true);
+      else setError("failed");
     } finally {
+      abort.current = null;
       setRunning(false);
       setQuestion("");
       router.refresh(); // free questions / balance changed
@@ -121,6 +129,13 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
     // On success the tutor reports the result itself (approval_result); on failure, show the buttons again.
     if (!res.ok) updateNote((s) => s.approval?.logId === logId, (s) => ({ ...s, approval: { ...s.approval!, state: "waiting" } }));
   }
+
+  function stop() {
+    abort.current?.abort();
+  }
+
+  // Leaving the page stops the question too (no charge).
+  useEffect(() => () => abort.current?.abort(), []);
 
   // A question typed on the home screen arrives as ?q=… and starts right away (once).
   const started = useRef(false);
@@ -230,16 +245,21 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
           {running && !answer && (
             <div className="flex items-center gap-2 text-sm text-black/50">
               <Spinner /> {steps.length === 0 ? "Reading your question…" : waiting.length ? "Waiting for your answer…" : "Thinking…"}
+              <button type="button" onClick={stop} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 py-1 text-black/70 hover:bg-black/5">
+                <Square size={12} aria-hidden /> Stop
+              </button>
             </div>
           )}
 
-          {answer && (
+          {stopped && !answer && <Notice kind="info">Stopped. You weren&apos;t charged for this question.</Notice>}
+
+          {answer && !stopped && (
             <div className="card p-5">
               <AnswerMarkdown text={answer} />
             </div>
           )}
 
-          {done && (
+          {done && !stopped && (
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-black/55">
               <span>
                 {done.free ? "Free question." : `This question cost ${usd(done.chargedUsd)}.`}{" "}
@@ -273,9 +293,15 @@ export function AskChat({ placeholder, initialQuestion, examples = [] }: { place
           placeholder={placeholder}
           className="min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-[15px] outline-none placeholder:text-black/35"
         />
-        <button disabled={running || !question.trim()} className="btn-primary px-3" aria-label="Ask">
-          {running ? <Spinner /> : <ArrowUp size={18} aria-hidden />}
-        </button>
+        {running ? (
+          <button type="button" onClick={stop} className="btn-secondary px-3" aria-label="Stop">
+            <Square size={16} aria-hidden />
+          </button>
+        ) : (
+          <button disabled={!question.trim()} className="btn-primary px-3" aria-label="Ask">
+            <ArrowUp size={18} aria-hidden />
+          </button>
+        )}
       </form>
     </div>
   );

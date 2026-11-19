@@ -24,7 +24,13 @@ export async function POST(req: Request) {
   const baseUrl = await siteUrl();
 
   const encoder = new TextEncoder();
+  // Stop: the page aborts the request (or the student leaves). Then: no more purchases, no charge.
+  let stopped = false;
+  req.signal.addEventListener("abort", () => (stopped = true));
   const stream = new ReadableStream({
+    cancel() {
+      stopped = true;
+    },
     async start(controller) {
       let open = true;
       const send = (event: StreamEvent) => {
@@ -43,10 +49,11 @@ export async function POST(req: Request) {
           user,
           question,
           onEvent: send,
+          shouldStop: () => stopped,
           // The checker wants a person: show Approve / Skip and wait for the click.
           askHuman: async (preview, decision, logId) => {
             send({ type: "needs_approval", logId, title: preview.title, priceUsd: preview.priceUsd, why: decision.reason });
-            const answer = await waitForHumanAnswer(db, logId);
+            const answer = await waitForHumanAnswer(db, logId, () => stopped);
             send({ type: "approval_result", logId, answer });
             return answer;
           },

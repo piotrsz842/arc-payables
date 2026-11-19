@@ -38,6 +38,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         <span className="mt-1 block text-xs text-black/45">At least 8 characters.</span>
       </label>
       <SubmitButton pendingText="Creating your account…" className="btn-primary w-full">Create account</SubmitButton>
+      <Link href="/" className="btn-secondary w-full">Cancel</Link>
       <p className="text-center text-sm text-black/55">
         Already have an account? <Link href="/login" className="font-semibold text-brand-700">Sign in</Link>
       </p>

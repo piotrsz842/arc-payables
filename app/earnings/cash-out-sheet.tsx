@@ -53,7 +53,10 @@ export function CashOutSheet({ cashable, minArc, minBase }: { cashable: string; 
                 <label className="flex items-center gap-2"><input type="radio" name="to" value="arc" defaultChecked /> Arc · no fee · minimum ${minArc}</label>
                 <label className="flex items-center gap-2"><input type="radio" name="to" value="base_sepolia" /> Base Sepolia · transfer fee about $0.08 · minimum ${minBase}</label>
               </fieldset>
-              <button className="btn-primary">Review</button>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn-primary">Review</button>
+                <button type="button" onClick={() => { setChoice("tutoring"); setAdvanced(false); }} className="btn-secondary">Cancel</button>
+              </div>
               <p className="text-xs text-black/45">You'll see the exact fee and what arrives before anything is sent.</p>
             </form>
           )}
