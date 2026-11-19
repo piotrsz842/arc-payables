@@ -213,7 +213,7 @@ How we keep it down:
 | Hard-to-read words | guessed, and **invented facts** (wrong chapter, made-up country names, "5%" for "55%", "Edo/Tokyo" for "Beijing", "forts" for "food") | read correctly, or marked **[unclear]** for the author to fix |
 | Missing lines | dropped one | none |
 
-Invented facts in study material are worse than a few cents per upload, and the [unclear] marks show the author exactly what to correct. The model is a setting (`TRANSCRIBE_MODEL`). Questions, the checker and study sets stay on Haiku.
+Invented facts in study material are worse than a few cents per upload, and the [unclear] marks show the author exactly what to correct. The model is a setting (`TRANSCRIBE_MODEL`). Everything else (tutor answers, the checker, study sets, upload previews) runs on Haiku.
 
 **Why the tutor defaults to Haiku 5.5:** the hard part, knowing how *this* course teaches a topic, comes from the students' study guides the tutor buys, not from the model's own knowledge. Given those sections, Haiku writes a correct, cited answer built on the course's worked examples and exam tips for about 1/26 of Opus's cost (side-by-side in [`docs/tutor-model-comparison.md`](docs/tutor-model-comparison.md)). The model is a setting (`TUTOR_MODEL`). Routing harder questions automatically to a stronger model is listed under What's next.
 

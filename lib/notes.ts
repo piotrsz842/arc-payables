@@ -78,11 +78,10 @@ export async function describeChunks(course: string, noteTitle: string, chunks: 
   client ??= new Anthropic();
   const numbered = chunks.map((c, i) => `### Section ${i}\n${c}`).join("\n\n");
   const response = await client.beta.messages.parse({
-    model: "claude-opus-5-5", // previews decide what the checker sees, so they get the stronger model (once per upload)
-    max_tokens: 1000 + 200 * chunks.length, // ~100 tokens per preview plus a little thinking
+    model: "claude-haiku-5-5", // a short summary per section: Haiku is plenty (Opus is kept only for handwriting)
+    max_tokens: 500 + 200 * chunks.length, // ~100 tokens per preview, no thinking
+    thinking: { type: "disabled" },
     output_config: { effort: "low", format: betaZodOutputFormat(PreviewsSchema) },
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: `Course: ${course}\nNote title: ${noteTitle}\n\n${numbered}` }],
   });
