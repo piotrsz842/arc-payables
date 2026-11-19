@@ -17,7 +17,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
 
   const totals = await totalsFor(db, user.id);
   const myRating = (await authorRatings(db)).get(user.id);
-  const { data: notes } = await db.from("notes").select("id, course, title, deleted_at").eq("author_id", user.id).order("created_at", { ascending: false });
+  const { data: notes } = await db.from("notes").select("*").eq("author_id", user.id).order("created_at", { ascending: false });
   const { data: snippets } = await db.from("snippets").select("id, note_id").eq("author_id", user.id);
   const { data: sales } = await db.from("ledger_entries").select("snippet_id, amount_usd, created_at").eq("user_id", user.id).eq("kind", "sale");
   const noteOf = new Map((snippets ?? []).map((s) => [s.id, s.note_id]));
@@ -98,6 +98,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                     <div className={`truncate font-medium ${n.deleted_at ? "text-black/35 line-through" : ""}`}>{n.title}</div>
                     <div className="text-xs text-black/50">
                       {n.course} · {uses.get(n.id) ?? 0} {uses.get(n.id) === 1 ? "use" : "uses"}
+                      {n.handwritten && " · ✍ handwritten"}
                       {n.deleted_at && " · deleted"}
                     </div>
                   </div>

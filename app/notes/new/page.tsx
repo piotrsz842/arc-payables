@@ -1,4 +1,5 @@
-import { Lightbulb } from "lucide-react";
+import { Camera, Lightbulb } from "lucide-react";
+import Link from "next/link";
 import { SubmitButton } from "@/app/submit-button";
 import { Notice } from "@/app/ui/notice";
 import { requireUser } from "@/lib/auth";
@@ -33,6 +34,10 @@ export default async function NewNotePage({ searchParams }: { searchParams: Prom
           In <strong className="font-semibold text-ink">your own words</strong>. The tutor sees a one-line preview of each section and pays you every time it uses one.
         </p>
       </div>
+      <Link href="/notes/handwritten" className="card flex items-center gap-3 p-4 text-sm hover:border-brand-200">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><Camera size={18} aria-hidden /></span>
+        <span><span className="font-semibold">Handwritten notes?</span> <span className="text-black/55">Snap photos of your pages instead.</span></span>
+      </Link>
       {error && <Notice kind="error">{error === "duplicate" && detail ? detail : ERRORS[error]}</Notice>}
 
       <form action={uploadNote} className="card space-y-4 p-5">

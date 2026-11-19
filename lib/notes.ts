@@ -105,7 +105,7 @@ export async function describeChunks(course: string, noteTitle: string, chunks: 
 export async function saveNote(
   db: SupabaseClient,
   // priceUsd: optional fixed price for every section (seeded "premium" notes); otherwise priced by length.
-  note: { authorId: string; course: string; title: string; body: string; idPrefix?: string; priceUsd?: string; ownWorkConfirmed?: boolean },
+  note: { authorId: string; course: string; title: string; body: string; idPrefix?: string; priceUsd?: string; ownWorkConfirmed?: boolean; handwritten?: boolean; imagePaths?: string[] },
 ): Promise<{ noteId: string; sections: number }> {
   const course = normalizeCourse(note.course);
   if (note.priceUsd !== undefined && !(Number(note.priceUsd) >= 0.001 && Number(note.priceUsd) <= 0.01)) {
@@ -133,7 +133,11 @@ export async function saveNote(
 
   const { data: saved, error } = await db
     .from("notes")
-    .insert({ author_id: note.authorId, course, title: note.title.trim(), body: note.body, own_work_confirmed: note.ownWorkConfirmed ?? false })
+    .insert({
+      author_id: note.authorId, course, title: note.title.trim(), body: note.body, own_work_confirmed: note.ownWorkConfirmed ?? false,
+      // Only sent for handwritten guides, so typed uploads don't depend on migration 007.
+      ...(note.handwritten ? { handwritten: true, image_paths: note.imagePaths ?? [] } : {}),
+    })
     .select("id")
     .single();
   if (error) throw new Error(`Could not save note: ${error.message}`);

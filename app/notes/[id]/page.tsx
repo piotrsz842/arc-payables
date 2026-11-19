@@ -20,7 +20,8 @@ export default async function NotePage({
   const { id } = await params;
   const { uploaded } = await searchParams;
 
-  const { data: note } = await db.from("notes").select("id, author_id, course, title, created_at, deleted_at").eq("id", id).single();
+  // "*": works before and after migration 007 (handwritten).
+  const { data: note } = await db.from("notes").select("*").eq("id", id).single();
   if (!note || note.author_id !== user.id) notFound(); // only the author sees this page
 
   const { data: snippets } = await db
@@ -50,7 +51,10 @@ export default async function NotePage({
       {note.deleted_at && <Notice kind="info">You deleted this study guide. It's no longer sold; what it earned stays yours.</Notice>}
       <div className="card flex items-end justify-between gap-4 p-5">
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wide text-brand-700">{note.course}</div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-700">
+            {note.course}
+            {note.handwritten && <span className="rounded-full bg-amber-50 px-2 py-0.5 normal-case tracking-normal text-amber-800">✍ Handwritten</span>}
+          </div>
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{note.title}</h1>
         </div>
         <div className="shrink-0 text-right">

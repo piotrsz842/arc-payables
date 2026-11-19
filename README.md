@@ -33,6 +33,8 @@ Paying students for their work only makes sense if what we sell is **their own w
 
 **Authors can delete their own study guides** (with a confirm step). Deleting is a *soft* delete that reuses the reports' remove-from-sale flag: the guide disappears from search, previews, the tutor and the x402 endpoint at once. Its rows stay, so past sales, earnings and cash-out history remain intact, and earnings already made can still be cashed out. **Content an AI agent already bought can't be taken back**, but it can't be sold again.
 
+**Handwritten study guides.** Authors can photograph handwritten pages (phone camera or files, up to 6 pages). Claude's vision model (Haiku 5.5 by default) transcribes each page and rates how readable it is; dark, blurry or cut-off pages get a warning. The author sees each photo next to its transcription and fixes it before publishing. The published text goes through exactly the same checks as a typed upload: own-work confirmation, near-duplicate check, sections and pricing. The original photos are stored in a **private** bucket, and buyers only ever get the text. Such guides carry a **"Handwritten" badge**: a signal of human authorship, not proof (anyone can copy a printout by hand).
+
 **Ratings.** After each answer the student can give a thumbs up or down. Ratings count toward the authors whose sections that answer used, appear on each author's dashboard, and break ties in search. Relevance always comes first.
 
 ## Agent identity and reputation (ERC-8004 on Arc)

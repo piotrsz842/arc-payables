@@ -20,6 +20,7 @@
     "erc8004": "tsx --conditions=react-server --env-file=.env scripts/erc8004.ts",
     "test-stream-webhook": "tsx --env-file=.env scripts/test-stream-webhook.ts",
     "screenshots": "tsx --env-file=.env scripts/screenshots.ts",
+    "test-transcribe": "tsx --conditions=react-server --env-file=.env scripts/test-transcribe.ts",
     "reports": "tsx --env-file=.env scripts/reports.ts",
     "payout": "tsx --conditions=react-server --env-file=.env scripts/payout.ts",
     "bridge-estimate": "tsx --env-file=.env scripts/bridge-estimate.ts",
@@ -49,6 +50,7 @@
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
     "server-only": "^0.0.1",
+    "sharp": "0.35.5",
     "viem": "^2.57.19",
     "zod": "^4.6.7"
   },
