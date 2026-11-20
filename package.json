@@ -39,7 +39,8 @@
     "test-stop": "tsx --env-file=.env scripts/test-stop.ts",
     "normalize-courses": "tsx --env-file=.env scripts/normalize-courses.ts",
     "move-guide": "tsx --env-file=.env --conditions=react-server scripts/move-guide.ts",
-    "republish-guide": "tsx --env-file=.env --conditions=react-server scripts/republish-guide.ts"
+    "republish-guide": "tsx --env-file=.env --conditions=react-server scripts/republish-guide.ts",
+    "make-demo-student": "tsx --env-file=.env --conditions=react-server scripts/make-demo-student.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

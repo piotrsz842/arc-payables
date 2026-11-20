@@ -37,7 +37,7 @@ export default async function ConfirmCashOut({ searchParams }: { searchParams: P
         <div className="flex justify-between"><dt className="text-black/55">From your earnings</dt><dd>{usd(quote.amountUsd)}</dd></div>
         <div className="flex justify-between">
           <dt className="text-black/55">{destination === "arc" ? "Fees (we cover them)" : "Estimated transfer fees"}</dt>
-          <dd>−{usd(quote.feesUsd)}</dd>
+          <dd>{Number(quote.feesUsd) > 0 ? "−" : ""}{usd(quote.feesUsd)}</dd>
         </div>
         <div className="flex justify-between border-t border-black/5 pt-2 text-base font-bold">
           <dt>You receive</dt>
