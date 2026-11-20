@@ -29,7 +29,7 @@ Built for the UBC 2026 Hackathon on **Arc testnet** (Circle's stablecoin L1). Li
 
 1. **Signup** creates a Circle developer-controlled wallet on Arc behind the scenes. The student never sees an address.
 2. **Upload:** paste text, or upload a .docx, PDF, .txt or .md file (or photos of handwritten pages). A guide with `#` headings is split at its headings. One without headings (a Google Doc, a wall of text) is split into topics by Claude Haiku, which only picks *where* each topic starts, so every word stays the author's; the author reviews the sections before publishing. Claude writes a one-line preview for each, and the platform prices each section (see *Pricing*). A near-duplicate check (pgvector) rejects copies of existing sections and of past tutor answers.
-3. **Ask:** the tutor searches free previews (pgvector meaning search, filtered to the course first, plus keywords) and proposes sections to buy, each with a reason.
+3. **Ask:** the tutor searches free previews (pgvector meaning search, filtered to the course first, plus keywords) and proposes every on-topic-looking section, each with a reason; the checker, not the tutor, decides what's worth paying for. Sections the student bought in an earlier question are reused for free (still only if the judge finds them on topic and course-specific).
 4. **Checker:** plain-code rules run first. Only if they pass does one isolated Claude Haiku call judge relevance and course-specific value. The verdict is logged *before* any money moves.
 5. **Pay:** allowed sections are bought over **x402** with **Circle Gateway Nanopayments**. The author's ledger balance rises immediately, and Gateway settles the payments to the platform in batches on Arc.
 6. **Answer:** the tutor answers using and citing the course-specific details (worked examples, exam tips). The page shows what was bought, what was skipped and why, and what it cost.
@@ -51,6 +51,7 @@ Design rule: **the AI may judge relevance, but code decides about money.**
 | Course-specific value | block "generic" sections (textbook facts the tutor already knows) | students are paid for what only the course's students know |
 | Approval setting | **ask the student** above **their own setting** ("Ask me before any single purchase over $X", default $0.005, on the Earnings page) | the student decides how much the tutor may spend without asking: "Buy it" / "Skip" in the chat; no answer within 2 minutes = skip |
 | Fail safe | if the judge can't run (outage, refusal) → ask the student | the checker never fails open |
+| Citations | the answer may cite only sections the tutor actually received; citations of blocked sections are removed | a free preview is not the content |
 
 Every decision is logged in `purchase_decisions` *before* payment. The receipt page and `npm run decision-log` show it. Tests: `npm run test-checker` (12 offline tests with a fake judge; `-- --live` adds one real batched judge call), `npm run stage2-demo` (8 scripted proposals showing every rule).
 
@@ -236,6 +237,8 @@ Invented facts in study material are worse than a few cents per upload, and the 
 - **Approval-timeout budget behavior:** when a purchase waits for the student's OK and times out (2 minutes), its price still counts against that question's budget. This is deliberately cautious.
 - **Cash-out limits:** authors can cash out what their guides *earned*; money added by top-up is for questions. Very fresh earnings may still be settling into Gateway (usually minutes).
 - **Same owner, two wallets:** ERC-8004 reputation is recorded by the platform's checker wallet; truly independent raters are future work.
+- **Buyer clocks:** Gateway requires a signed payment to stay valid for at least 7 days, and the buyer computes that from its own clock. We ask for one extra hour, so a buyer whose clock is up to about an hour slow still pays; a worse clock is refused (`authorization_validity_too_short`).
+- **Reused sections on receipts:** a section reused for free in a later question shows in the live chat and in study sources, but the receipt page lists only that question's purchases.
 - **Rate limits:** the signup limit is site-wide plus best-effort per visitor; there is no CAPTCHA.
 - **Testnet only**, and `npm audit` flags an `elliptic` advisory inside Circle's SDK dependencies (we don't sign with it).
 
@@ -249,7 +252,7 @@ The seeded course is **GGIS 204 (urban geography)**: study guides by Maya Chen (
 2. **Ask:** *"What's the difference between site and situation? Give examples from class."* Open **Details**: the tutor buys Daniel's site-vs-situation section and cites his Chicago, New Orleans, Salem and Santa Barbara examples. The checker **blocks** the campsite guide (off-topic) and Jordan's glossary (*"Generic: the tutor could answer this on its own"*). The answer also flags a mistake in the notes (soil listed under "situation").
 3. **Ask again:** *"Why did cities like Chicago and New Orleans grow where they did?"* Daniel's section shows **"already yours, free"**: sections a student bought before are never paid for twice. Anything the notes don't cover is labelled general knowledge.
 4. **Study:** Study tab → quiz, course *GGIS 204*, topic *chapter 1 cities*. Every item names its source section; owned sections are reused free, new ones are checked and paid. The quiz never teaches a mistake in the notes as the right answer. Flashcards work the same way.
-5. **Approve a purchase:** on Earnings, set *"Ask me before any single purchase over"* to $0.001, then ask *"CPSC 221: why does quicksort take O(n²) on sorted input?"*. Each purchase shows **Buy it / Skip** first; *Skip* shows "You said no."
+5. **Approve a purchase:** on Earnings, set *"Ask me before any single purchase over"* to $0.002 **before** step 2 on a new account: Daniel's section ($0.0025) then shows **Buy it / Skip** first; *Skip* shows "You said no." (Sections are only bought once per student, so on an account that already owns them, use $0.001 and *"CPSC 221: why does quicksort take O(n²) on sorted input?"*.)
 6. **Be an author:** Upload → type a guide, upload a .docx/.pdf, or photograph handwritten pages (photo beside the transcription; Maya's guide carries the "Handwritten" badge). Earnings show in dollars on Home and Earnings.
 7. **Any agent can buy:** `npm run outside-agent -- buy "urbanization trends city models" "GGIS 204"` buys a section over x402 with no account; the author is credited.
 8. **Cash out:** as an author, Earnings → *Use for tutoring*, or *Advanced → Send to a crypto wallet → Arc*. The confirm screen shows fees and what arrives; the cash-out gets a **Confirmed** badge once QuickNode sees its Memo event on Arc.
