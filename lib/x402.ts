@@ -45,7 +45,10 @@ function requirementsFor(priceUsd: string): PaymentRequirements {
     asset: USDC_ADDRESS,
     amount: parseUnits(priceUsd, USDC_DECIMALS).toString(), // "0.001" → "1000"
     payTo: sellerAddress(),
-    maxTimeoutSeconds: GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS, // the SDK's own validity window
+    // Gateway requires signed payments to stay valid at least 7 days. The SDK's
+    // window is 7 days + 100 s, so a buyer whose clock is ~2 minutes slow gets
+    // "authorization_validity_too_short" (seen 2026-11-19). One extra hour of slack.
+    maxTimeoutSeconds: GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS + 3600,
     // "extra" tells the buyer: pay through Gateway's batching contract, not a plain transfer.
     extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: GATEWAY_WALLET },
   };

@@ -104,11 +104,19 @@ export async function createStudySet(opts: {
     }
     if (bought >= MAX_NEW_PURCHASES) continue;
     // 4. New section: the checker decides, then x402 pays the author.
-    const outcome = await proposePurchase({
-      db, agent, baseUrl: opts.baseUrl, run, preview: p, meter, judge,
-      reason: `The student wants ${kind} on "${topic}"; this section's preview is about that topic.`,
-      askHuman: async () => "pending", // study mode doesn't stop to ask: pricey sections are skipped
-    });
+    let outcome: Awaited<ReturnType<typeof proposePurchase>>;
+    try {
+      outcome = await proposePurchase({
+        db, agent, baseUrl: opts.baseUrl, run, preview: p, meter, judge,
+        reason: `The student wants ${kind} on "${topic}"; this section's preview is about that topic.`,
+        askHuman: async () => "pending", // study mode doesn't stop to ask: pricey sections are skipped
+      });
+    } catch (err) {
+      // A failed payment skips this section (nothing was charged for it) instead of failing the whole set.
+      console.error("Study purchase failed:", err);
+      sources.push({ title: p.title, authorName, priceUsd: p.priceUsd, how: "skipped", why: "The payment didn't go through, so it was skipped." });
+      continue;
+    }
     if (outcome.paid && outcome.content) {
       bought++;
       texts.push({ title: p.title, content: outcome.content });
